@@ -55,29 +55,7 @@ KnowledgeMelon/
 
 ## Getting Started
 
-### 1. One-Click Start
-
-From the repository root, run:
-
-```powershell
-.\start-dev.ps1
-```
-
-If you prefer double-clicking in Windows Explorer, run `start-dev.bat` instead.
-
-This startup script starts PostgreSQL first, waits for the database container to become healthy, and then launches the backend and frontend.
-
-### 2. Start PostgreSQL Manually
-
-From the repository root:
-
-```bash
-docker-compose up -d
-```
-
-The database container is exposed on `localhost:5433`.
-
-### 3. Configure the Backend
+### Configure the Environment
 
 Create a `backend/.env` file if you need to override defaults:
 
@@ -89,7 +67,30 @@ APP_SECRET=your_secret_here
 
 If you are not using Docker Compose, adjust `DATABASE_URL` to match your local PostgreSQL setup.
 
-### 4. Run the Backend
+### Start the App
+
+Choose either one-click start or manual startup. You only need one of them.
+
+#### One-click start
+
+Run either of these from the repository root:
+
+- `.\start-dev.ps1`
+- `start-dev.bat`
+
+Pick one, and it will automatically start PostgreSQL, wait for the database to become healthy, then launch the backend and frontend. You do not need to start them manually.
+
+#### Start services manually
+
+If you prefer to run each service yourself:
+
+1. Start PostgreSQL
+
+```bash
+docker-compose up -d
+```
+
+2. Run the backend
 
 ```bash
 cd backend
@@ -99,9 +100,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The API runs at `http://localhost:8000`.
-
-### 5. Run the Frontend
+3. Run the frontend
 
 ```bash
 cd frontend
@@ -109,11 +108,9 @@ npm install
 npm run dev
 ```
 
-The app runs at `http://localhost:3000`.
+### Local Ollama Embeddings (Optional)
 
-## Local Ollama Embeddings
-
-The Knowledge page can use local embeddings through Ollama.
+The Knowledge page can use local embeddings through Ollama
 
 ### How It Works
 
@@ -134,7 +131,7 @@ ollama pull nomic-embed-text
 4. If needed, start it with `ollama serve`.
 5. Open the Knowledge page and enable `Use local embeddings`.
 
-Note: `start-dev.ps1` does not start Ollama for you. It only starts PostgreSQL, the backend, and the frontend.
+Note: `start-dev.ps1` and `start-dev.bat` do not start Ollama for you. They only start PostgreSQL, the backend, and the frontend.
 
 ## Useful Scripts
 
@@ -160,7 +157,7 @@ uvicorn main:app --reload
 .\start-dev.ps1
 ```
 
-Or double-click `start-dev.bat` on Windows.
+Or run `start-dev.bat` on Windows.
 
 ## API Overview
 
