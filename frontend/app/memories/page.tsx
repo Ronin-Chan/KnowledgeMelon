@@ -410,28 +410,28 @@ export default function MemoriesPage() {
 
       {/* 主内容 */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-8 py-12">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
           {/* 标题栏 */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("memoriesTitle")}</h1>
               <p className="text-muted-foreground">{t("memoriesSubtitle")}</p>
             </div>
 
-                <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setShowSettings(true)}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  {t("memoriesExtractionSettings")}
-                </Button>
-                <Button onClick={() => setShowAddForm(!showAddForm)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("memoriesAddMemory")}
-                </Button>
-              </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button variant="outline" onClick={() => setShowSettings(true)}>
+                <Settings className="mr-2 h-4 w-4" />
+                {t("memoriesExtractionSettings")}
+              </Button>
+              <Button onClick={() => setShowAddForm(!showAddForm)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("memoriesAddMemory")}
+              </Button>
+            </div>
           </div>
 
           {/* 设置摘要 */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="p-4 rounded-lg border border-border bg-card">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-4 w-4 text-purple-500" />
@@ -462,7 +462,7 @@ export default function MemoriesPage() {
           </div>
 
           {/* 搜索 */}
-          <div className="flex gap-2 mb-6">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -473,7 +473,7 @@ export default function MemoriesPage() {
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" onClick={handleSearch}>
+            <Button variant="outline" className="sm:w-auto" onClick={handleSearch}>
               {t("memoriesSearch")}
             </Button>
           </div>

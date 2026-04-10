@@ -67,10 +67,10 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-8 py-12">
-          <h1 className="text-3xl font-semibold mb-8">{t("settingsTitle")}</h1>
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
+          <h1 className="mb-8 text-3xl font-semibold">{t("settingsTitle")}</h1>
 
-          <div className="flex flex-wrap gap-2 mb-8 border-b border-border">
+          <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border pb-1">
             {[
               ["models", t("settingsModels")],
               ["providers", t("settingsApi")],
@@ -80,7 +80,7 @@ export default function SettingsPage() {
               <button
                 key={value}
                 onClick={() => setActiveTab(value as SettingsTab)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === value
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -93,7 +93,7 @@ export default function SettingsPage() {
 
           {activeTab === "models" && (
             <div>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <Bot className="h-5 w-5" />
                 </div>
@@ -105,7 +105,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-6">
+              <div className="mb-6 flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedProvider("")}
                   className={`px-3 py-1.5 rounded-full text-sm transition-colors ${

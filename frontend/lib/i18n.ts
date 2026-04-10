@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useSettingsStore } from "@/stores/settings";
 
 export type Locale = "zh" | "en";
@@ -469,10 +470,12 @@ export function useLocale(): Locale {
 export function useT() {
   const locale = useLocale();
 
-  return (key: string, values?: TranslationValues) => {
-    const dictionary = TRANSLATIONS[locale] || TRANSLATIONS.zh;
-    const fallback = TRANSLATIONS.zh;
-    const template = dictionary[key] ?? fallback[key] ?? key;
-    return formatMessage(template, values);
-  };
+  return useMemo(() => {
+    return (key: string, values?: TranslationValues) => {
+      const dictionary = TRANSLATIONS[locale] || TRANSLATIONS.zh;
+      const fallback = TRANSLATIONS.zh;
+      const template = dictionary[key] ?? fallback[key] ?? key;
+      return formatMessage(template, values);
+    };
+  }, [locale]);
 }

@@ -141,6 +141,7 @@ export default function ChatPage() {
     const [pendingDeleteConversation, setPendingDeleteConversation] = useState<
         string | null
     >(null);
+    const [isMobileViewport, setIsMobileViewport] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -176,6 +177,22 @@ export default function ChatPage() {
     const currentProvider = PROVIDERS.find(
         (p) => p.id === currentModel?.provider,
     );
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 767px)");
+
+        const handleChange = () => {
+            const isMobile = mediaQuery.matches;
+            setIsMobileViewport(isMobile);
+            if (isMobile) {
+                setSidebarOpen(false);
+            }
+        };
+
+        handleChange();
+        mediaQuery.addEventListener("change", handleChange);
+        return () => mediaQuery.removeEventListener("change", handleChange);
+    }, []);
 
     // 加载对话列表
     useEffect(() => {
@@ -952,11 +969,19 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="flex h-screen bg-background">
-                {/* 侧边栏 */}
+        <div className="relative flex h-screen bg-background">
+            {isMobileViewport && sidebarOpen && (
+                <button
+                    type="button"
+                    aria-label="Close sidebar"
+                    onClick={() => setSidebarOpen(false)}
+                    className="fixed inset-0 z-30 cursor-default bg-black/40 md:hidden"
+                />
+            )}
+
+            {/* 侧边栏 */}
             <aside
-                className={`${sidebarOpen ? "w-72" : "w-0"
-                    } bg-[#f9f9f9] dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 transition-all duration-300 overflow-hidden flex flex-col`}
+                className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-[#f9f9f9] dark:bg-[#0d0d0d] transition-transform duration-300 md:relative md:z-auto md:max-w-none md:translate-x-0 md:transition-[width,transform] ${sidebarOpen ? "translate-x-0 md:w-72" : "-translate-x-full md:translate-x-0 md:w-0 md:border-r-0"}`}
             >
                 {/* 新建对话按钮 */}
                 <div className="p-4">
@@ -1138,9 +1163,9 @@ export default function ChatPage() {
             </aside>
 
             {/* 主内容 */}
-            <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d0d0d]">
+            <main className="flex min-w-0 flex-1 flex-col bg-white dark:bg-[#0d0d0d]">
                 {/* 标题栏 */}
-                <header className="flex items-center justify-between px-4 py-3">
+                <header className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-4">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1156,13 +1181,13 @@ export default function ChatPage() {
                             value={model}
                             onValueChange={(value) => {
                                 const m = SUPPORTED_MODELS.find((mod) => mod.id === value);
-                                if (m) {
-                                    setModel(m.id);
-                                    setSelectedProvider(m.provider);
-                                }
-                            }}
+                            if (m) {
+                                setModel(m.id);
+                                setSelectedProvider(m.provider);
+                            }
+                        }}
                         >
-                            <SelectTrigger className="w-[320px] text-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                            <SelectTrigger className="w-full min-w-0 text-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600 transition-colors sm:w-[320px]">
                                 <SelectValue placeholder={t("chatSelectModel")}>
                                     {currentModel && (
                                         <div className="flex items-center gap-2 truncate">
@@ -1179,18 +1204,18 @@ export default function ChatPage() {
                                     )}
                                 </SelectValue>
                             </SelectTrigger>
-                            <SelectContent className="max-h-[500px] w-[360px]">
+                            <SelectContent className="max-h-125 w-90">
                                 {localizedModels.map((m) => (
                                     <SelectItem
                                         key={m.id}
                                         value={m.id}
                                         className="py-3 h-auto whitespace-normal"
                                     >
-                                        <div className="flex flex-col items-start gap-1 w-full max-w-[360px]">
+                                        <div className="flex flex-col items-start gap-1 w-full max-w-90">
                                             <span className="font-medium text-sm truncate w-full">
                                                 {m.name}
                                             </span>
-                                            <span className="text-xs text-gray-500 leading-relaxed break-words w-full">
+                                            <span className="text-xs text-gray-500 leading-relaxed wrap-break-word w-full">
                                                 {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
                                                 {m.descriptionKey}
                                             </span>
@@ -1231,7 +1256,7 @@ export default function ChatPage() {
                         </div>
                     ) : (
                         // 消息列表
-                        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+                        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
                             {messages.map((message) => (
                                 <div
                                     key={message.id}
@@ -1254,7 +1279,7 @@ export default function ChatPage() {
                                             }`}
                                     >
                                         <div
-                                            className={`inline-block text-left max-w-[85%] px-4 py-3 rounded-2xl ${message.role === "user"
+                                            className={`inline-block text-left max-w-6xl px-4 py-3 rounded-2xl ${message.role === "user"
                                                 ? "bg-gray-900 dark:bg-blue-600 text-white rounded-br-md"
                                                 : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 rounded-bl-md shadow-sm"
                                                 }`}
@@ -1462,7 +1487,7 @@ export default function ChatPage() {
                 {/* 错误提示横幅 */}
                 {errorMessage && (
                     <div className="px-4 pt-2">
-                        <div className="max-w-3xl mx-auto">
+                        <div className="max-w-4xl mx-auto">
                             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm shadow-sm">
                                 <span className="font-medium">{errorMessage}</span>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1486,7 +1511,7 @@ export default function ChatPage() {
 
                 {/* 输入区域 */}
                 <div className="px-4 pb-6 pt-2">
-                    <div className="max-w-3xl mx-auto">
+                    <div className="max-w-4xl mx-auto">
                         <div
                             className={`bg-white dark:bg-gray-900 rounded-3xl border shadow-lg hover:shadow-xl transition-shadow ${isDraggingFile
                                 ? "border-blue-400 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900/40"
