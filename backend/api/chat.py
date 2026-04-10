@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import traceback
+import os
+import tempfile
 
 from models.schemas import ChatRequest, RAGChatRequest
 from services.llm_service import llm_service
 from services.conversation_service import conversation_service
 from services.memory_service import memory_service
+from services.document_service import document_service
 from services.tools_service import tools_service
 from core.database import get_session, async_session_maker
 import uuid
@@ -56,6 +59,35 @@ async def _extract_memories_background(
         print(f"[Auto Memory Error] {type(e).__name__}: {e}")
 
 
+async def _parse_temporary_attachment(file: UploadFile) -> dict:
+    file_ext = os.path.splitext(file.filename or "")[1].lower()
+    allowed_types = [".pdf", ".docx", ".txt", ".md"]
+    if file_ext not in allowed_types:
+        raise HTTPException(400, f"Unsupported file type. Allowed: {allowed_types}")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Empty file")
+
+    temp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as temp_file:
+            temp_file.write(content)
+            temp_path = temp_file.name
+
+        parsed_text = await document_service.parse_document(temp_path, file_ext)
+        parsed_text = (parsed_text or "").strip()
+        return {
+            "name": file.filename,
+            "file_type": file_ext,
+            "content": parsed_text[:16000],
+            "truncated": len(parsed_text) > 16000,
+        }
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
 @router.post("/chat")
 async def chat(
     request: ChatRequest,
@@ -89,6 +121,8 @@ async def chat(
                 model=request.model,
                 use_rag=False,
                 use_memory=False,
+                use_tools=request.use_tools,
+                attachments=request.attachments,
                 base_url=request.baseUrl,
                 session=session,
                 history=optimized_context
@@ -104,6 +138,14 @@ async def chat(
                     role="assistant",
                     content=assistant_content,
                     model=request.model
+                )
+
+                await conversation_service.generate_conversation_title(
+                    session=session,
+                    conversation_id=request.conversationId,
+                    api_key=request.apiKey,
+                    model=request.model,
+                    base_url=request.baseUrl,
                 )
 
                 # 检查是否需要生成摘要
@@ -163,6 +205,7 @@ async def chat_with_rag(
                 use_rag=request.use_rag,
                 use_memory=request.use_memory,
                 use_tools=request.use_tools,
+                attachments=request.attachments,
                 base_url=request.baseUrl,
                 session=session,
                 history=optimized_context
@@ -178,6 +221,14 @@ async def chat_with_rag(
                     role="assistant",
                     content=assistant_content,
                     model=request.model
+                )
+
+                await conversation_service.generate_conversation_title(
+                    session=session,
+                    conversation_id=request.conversationId,
+                    api_key=request.apiKey,
+                    model=request.model,
+                    base_url=request.baseUrl,
                 )
 
                 # 检查是否需要生成摘要
@@ -200,7 +251,7 @@ async def chat_with_rag(
                         _extract_memories_background(
                             conversation_id=request.conversationId,
                             api_key=request.apiKey,
-                            provider=request.model.split("-")[0] if "-" in request.model else "openai",
+                            provider=llm_service.infer_provider(request.model, request.baseUrl),
                             base_url=request.baseUrl
                         )
                     )
@@ -211,6 +262,14 @@ async def chat_with_rag(
             yield f"[ERROR]{str(e)}"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.post("/chat/attachments/preview")
+async def preview_attachment(
+    file: UploadFile = File(...),
+):
+    """Parse an uploaded file for temporary chat-context use."""
+    return await _parse_temporary_attachment(file)
 
 
 @router.get("/tools")

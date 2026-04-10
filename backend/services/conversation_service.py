@@ -19,7 +19,7 @@ MAX_MESSAGES_BEFORE_SUMMARY = 20  # 超过此消息数开始摘要
 SUMMARY_TRIGGER_THRESHOLD = 100000  # 触发摘要的 token 阈值
 
 
-def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
+def count_tokens(text: str, model: str = "gpt-4.1-mini") -> int:
     """计算文本的 token 数量"""
     try:
         # 使用 tiktoken 计算 token
@@ -30,7 +30,7 @@ def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
         return len(text) // 4
 
 
-def count_messages_tokens(messages: List[Dict[str, str]], model: str = "gpt-4o-mini") -> int:
+def count_messages_tokens(messages: List[Dict[str, str]], model: str = "gpt-4.1-mini") -> int:
     """计算消息列表的总 token 数"""
     total = 0
     for msg in messages:
@@ -47,7 +47,7 @@ class ConversationService:
         self,
         session: AsyncSession,
         title: Optional[str] = None,
-        model: str = "gpt-4o-mini"
+        model: str = "gpt-4.1-mini"
     ) -> Conversation:
         """创建新对话"""
         conversation = Conversation(
@@ -117,7 +117,7 @@ class ConversationService:
         conversation_id: str,
         role: str,
         content: str,
-        model: str = "gpt-4o-mini"
+        model: str = "gpt-4.1-mini"
     ) -> Message:
         """添加消息到对话"""
         # 计算 token
@@ -184,7 +184,7 @@ class ConversationService:
         async for chunk in llm_service.stream_chat(
             message=summary_prompt,
             api_key=api_key,
-            model="gpt-4o-mini",  # 使用轻量模型生成摘要
+            model="gpt-4.1-mini",  # 使用轻量模型生成摘要
             use_rag=False,
             use_memory=False
         ):
@@ -210,7 +210,7 @@ class ConversationService:
         self,
         session: AsyncSession,
         conversation_id: str,
-        current_model: str = "gpt-4o-mini",
+        current_model: str = "gpt-4.1-mini",
         max_tokens: int = MAX_CONTEXT_TOKENS
     ) -> List[Dict[str, str]]:
         """
@@ -325,6 +325,49 @@ class ConversationService:
             await session.commit()
             return True
         return False
+
+    async def generate_conversation_title(
+        self,
+        session: AsyncSession,
+        conversation_id: str,
+        api_key: str,
+        model: str,
+        base_url: str = None,
+    ) -> Optional[str]:
+        """Generate and persist a title for the first exchange."""
+        conversation = await self.get_conversation(session, conversation_id)
+        if not conversation:
+            return None
+
+        default_titles = {"新对话", "New conversation", "New chat", "", None}
+        if conversation.title not in default_titles:
+            return conversation.title
+
+        messages = await self.get_conversation_messages(
+            session, conversation_id, limit=2
+        )
+        user_message = next((m.content for m in messages if m.role == "user"), "").strip()
+        assistant_message = next((m.content for m in messages if m.role == "assistant"), "").strip()
+
+        if not user_message or not assistant_message:
+            return conversation.title
+
+        title = await llm_service.generate_conversation_title(
+            api_key=api_key,
+            model=model,
+            user_message=user_message,
+            assistant_message=assistant_message,
+            base_url=base_url,
+        )
+
+        title = title.strip().strip('"').strip("'")
+        if not title:
+            return conversation.title
+
+        conversation.title = title[:80]
+        conversation.updated_at = datetime.utcnow()
+        await session.commit()
+        return conversation.title
 
 
 # 全局服务实例

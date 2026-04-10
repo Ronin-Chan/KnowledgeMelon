@@ -61,7 +61,7 @@ The database container is exposed on `localhost:5433`.
 Create a `backend/.env` file if you need to override defaults:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/knowledge_assistant
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/knowledge_melon
 OPENAI_API_KEY=your_key_here
 APP_SECRET=your_secret_here
 ```
@@ -129,4 +129,3 @@ uvicorn main:app --reload
 
 - The frontend talks to the backend at `http://localhost:8000` by default.
 - If you change the backend host or port, set `NEXT_PUBLIC_API_URL` in the frontend environment.
-- Screenshots were removed from this README because the image assets are no longer in the repo.

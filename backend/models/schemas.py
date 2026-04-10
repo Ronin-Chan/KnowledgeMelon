@@ -8,12 +8,20 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class AttachmentInput(BaseModel):
+    name: str
+    file_type: str
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str
     history: Optional[List[ChatMessage]] = None
     conversationId: Optional[str] = None
+    use_tools: bool = False
+    attachments: Optional[List[AttachmentInput]] = None
     apiKey: str
-    model: str = "gpt-5-mini"
+    model: str = "gpt-4.1-mini"
     baseUrl: Optional[str] = None
 
 
@@ -43,9 +51,10 @@ class RAGChatRequest(BaseModel):
     use_rag: bool = True
     use_memory: bool = True
     use_tools: bool = False
+    attachments: Optional[List[AttachmentInput]] = None
     conversationId: Optional[str] = None
     apiKey: str
-    model: str = "gpt-5-mini"
+    model: str = "gpt-4.1-mini"
     baseUrl: Optional[str] = None
 
 

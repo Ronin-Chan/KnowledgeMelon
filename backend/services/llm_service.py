@@ -30,6 +30,12 @@ def _to_text(value: Any) -> str:
 
 
 class LLMService:
+    WEB_SEARCH_TOOL_NAME = "web_search"
+
+    def infer_provider(self, model: str, base_url: Optional[str] = None) -> str:
+        """Public wrapper for provider inference."""
+        return self._infer_provider(model, base_url)
+
     def _infer_provider(self, model: str, base_url: Optional[str] = None) -> str:
         model_name = (model or "").lower()
         url = (base_url or "").lower()
@@ -101,6 +107,56 @@ class LLMService:
             return text
         return ""
 
+    def _get_web_search_tool_defs(self) -> List[Dict[str, Any]]:
+        web_search_tool = tools_service.get_tool(self.WEB_SEARCH_TOOL_NAME)
+        if not web_search_tool:
+            return []
+        return [web_search_tool.to_dict()]
+
+    def _format_attachments_context(
+        self,
+        attachments: Optional[List[Any]],
+        max_chars_per_attachment: int = 8000,
+        max_total_chars: int = 16000,
+    ) -> str:
+        if not attachments:
+            return ""
+
+        sections: List[str] = []
+        total_chars = 0
+
+        for attachment in attachments:
+            if isinstance(attachment, dict):
+                name = str(attachment.get("name") or "attachment")
+                file_type = str(attachment.get("file_type") or "").lower()
+                content = str(attachment.get("content") or "")
+            else:
+                name = str(getattr(attachment, "name", "attachment"))
+                file_type = str(getattr(attachment, "file_type", "")).lower()
+                content = str(getattr(attachment, "content", ""))
+
+            cleaned_content = content.strip()
+            if not cleaned_content:
+                continue
+
+            truncated_content = cleaned_content[:max_chars_per_attachment]
+            section = (
+                f"- File: {name}\n"
+                f"  Type: {file_type or 'unknown'}\n"
+                f"  Content:\n{truncated_content}"
+            )
+
+            if total_chars + len(section) > max_total_chars:
+                break
+
+            sections.append(section)
+            total_chars += len(section)
+
+        if not sections:
+            return ""
+
+        return "Current session attachments (temporary context):\n" + "\n\n".join(sections)
+
     async def _build_messages(
         self,
         message: str,
@@ -111,6 +167,7 @@ class LLMService:
         session: Optional[AsyncSession],
         use_rag: bool,
         use_memory: bool,
+        attachments: Optional[List[Any]] = None,
     ) -> List[Dict[str, Any]]:
         provider = self._infer_provider(model, base_url)
 
@@ -142,6 +199,10 @@ class LLMService:
             if memory_context.strip():
                 prompt_sections.append(memory_context.strip())
 
+        attachment_context = self._format_attachments_context(attachments)
+        if attachment_context:
+            prompt_sections.append(attachment_context)
+
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": "\n\n".join(prompt_sections)}
         ]
@@ -157,6 +218,7 @@ class LLMService:
         use_rag: bool = False,
         use_memory: bool = False,
         use_tools: bool = False,
+        attachments: Optional[List[Any]] = None,
         base_url: Optional[str] = None,
         session: Optional[AsyncSession] = None,
         history: Optional[List[Any]] = None,
@@ -170,6 +232,7 @@ class LLMService:
             session=session,
             use_rag=use_rag,
             use_memory=use_memory,
+            attachments=attachments,
         )
 
         common_kwargs: Dict[str, Any] = {
@@ -179,7 +242,19 @@ class LLMService:
         }
 
         if use_tools:
-            tool_defs = tools_service.get_tools()
+            tool_defs = self._get_web_search_tool_defs()
+            if not tool_defs:
+                stream = await acompletion(
+                    **common_kwargs,
+                    messages=messages,
+                    stream=True,
+                )
+                async for chunk in stream:
+                    text = self._extract_chunk_text(chunk)
+                    if text:
+                        yield text
+                return
+
             initial_response = await acompletion(
                 **common_kwargs,
                 messages=messages,
@@ -217,20 +292,32 @@ class LLMService:
             )
 
             for call in tool_calls:
+                tool_name = call.function.name
+                if tool_name != self.WEB_SEARCH_TOOL_NAME:
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "name": tool_name,
+                            "content": f"Error: tool '{tool_name}' is not allowed.",
+                        }
+                    )
+                    continue
+
                 try:
                     arguments = json.loads(call.function.arguments or "{}")
                 except Exception:
                     arguments = {}
 
                 tool_result = await tools_service.execute_tool(
-                    call.function.name,
+                    tool_name,
                     arguments,
                 )
                 messages.append(
                     {
                         "role": "tool",
                         "tool_call_id": call.id,
-                        "name": call.function.name,
+                        "name": tool_name,
                         "content": tool_result,
                     }
                 )
@@ -252,6 +339,53 @@ class LLMService:
             text = self._extract_chunk_text(chunk)
             if text:
                 yield text
+
+    async def generate_conversation_title(
+        self,
+        api_key: str,
+        model: str,
+        user_message: str,
+        assistant_message: str,
+        base_url: Optional[str] = None,
+    ) -> str:
+        """Generate a short conversation title from the first turn."""
+        prompt = (
+            "Generate a concise chat title from the user question and assistant answer. "
+            "Use the same language as the conversation. "
+            "Return only the title, with no quotes, punctuation, or markdown."
+        )
+        messages = [
+            {"role": "system", "content": prompt},
+            {
+                "role": "user",
+                "content": (
+                    f"User question:\n{user_message}\n\n"
+                    f"Assistant answer:\n{assistant_message}"
+                ),
+            },
+        ]
+
+        try:
+            response = await acompletion(
+                model=model,
+                api_key=api_key,
+                base_url=base_url,
+                messages=messages,
+                stream=False,
+                temperature=0.2,
+            )
+            choice = response.choices[0] if getattr(response, "choices", None) else None
+            message = getattr(choice, "message", None) if choice else None
+            title = _to_text(getattr(message, "content", None)).strip() if message else ""
+            if title:
+                return title[:80]
+        except Exception:
+            pass
+
+        fallback = user_message.strip().replace("\n", " ")
+        if len(fallback) > 60:
+            fallback = fallback[:57].rstrip() + "..."
+        return fallback or "New conversation"
 
 
 llm_service = LLMService()

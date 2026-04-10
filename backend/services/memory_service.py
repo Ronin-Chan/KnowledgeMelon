@@ -56,7 +56,7 @@ class MemoryService:
             print("[Memory] Auto-extract is disabled, skipping extraction")
             return []
 
-        llm = ChatOpenAI(api_key=api_key, model="gpt-3.5-turbo", temperature=0.3)
+        llm = ChatOpenAI(api_key=api_key, model="gpt-4.1-mini", temperature=0.3)
 
         system_prompt = """Extract important facts/preferences from conversation.
 Return JSON array: [{"content": "...", "category": "preference|fact|goal", "importance": 1-10}]"""

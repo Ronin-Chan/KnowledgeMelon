@@ -78,10 +78,13 @@ class EmbeddingService:
         text: str,
         api_key: str,
         provider: str = "openai",
-        base_url: Optional[str] = None
+        base_url: Optional[str] = None,
+        use_local: bool = False,
     ) -> List[float]:
         """Get embedding for a single text"""
-        embeddings = await self.get_embeddings([text], api_key, provider, base_url)
+        embeddings = await self.get_embeddings(
+            [text], api_key, provider, base_url, use_local
+        )
         return embeddings[0]
 
     async def _get_ollama_embeddings(

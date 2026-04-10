@@ -13,6 +13,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Brain,
   Plus,
   Trash2,
@@ -32,6 +49,7 @@ import {
 import { API_BASE_URL } from "@/lib/api";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { useT } from "@/lib/i18n";
 
 interface Memory {
   id: string;
@@ -57,18 +75,10 @@ interface Toast {
 }
 
 const categories = [
-  { value: "fact", label: "事实", color: "bg-blue-500/10 text-blue-600" },
-  {
-    value: "preference",
-    label: "偏好",
-    color: "bg-emerald-500/10 text-emerald-600",
-  },
-  { value: "goal", label: "目标", color: "bg-violet-500/10 text-violet-600" },
-  {
-    value: "important",
-    label: "重要",
-    color: "bg-amber-500/10 text-amber-600",
-  },
+  { value: "fact", color: "bg-blue-500/10 text-blue-600" },
+  { value: "preference", color: "bg-emerald-500/10 text-emerald-600" },
+  { value: "goal", color: "bg-violet-500/10 text-violet-600" },
+  { value: "important", color: "bg-amber-500/10 text-amber-600" },
 ];
 
 export default function MemoriesPage() {
@@ -83,6 +93,7 @@ export default function MemoriesPage() {
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [settings, setSettings] = useState<MemorySettings>({
     auto_extract: true,
     whitelist_topics: [],
@@ -93,6 +104,13 @@ export default function MemoriesPage() {
   const [newWhitelistItem, setNewWhitelistItem] = useState("");
   const [newBlacklistItem, setNewBlacklistItem] = useState("");
   const { apiKeys, openaiApiKey, model, baseUrls } = useSettingsStore();
+  const t = useT();
+  const categoryLabels = {
+    fact: t("memoriesCategoryFact"),
+    preference: t("memoriesCategoryPreference"),
+    goal: t("memoriesCategoryGoal"),
+    important: t("memoriesCategoryImportant"),
+  };
 
   // Get current model's provider and API key
   const currentModel = SUPPORTED_MODELS.find((m) => m.id === model);
@@ -119,11 +137,11 @@ export default function MemoriesPage() {
       }
     } catch (error) {
       console.error("Failed to fetch memories:", error);
-      showToast("error", "获取记忆列表失败");
+      showToast("error", t("memoriesFetchListFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -144,12 +162,15 @@ export default function MemoriesPage() {
 
   const handleAddMemory = async () => {
     if (!newMemory.content.trim()) {
-      alert("请输入记忆内容");
+      showToast("error", t("memoriesMissingContent"));
       return;
     }
     if (!apiKey) {
-      alert(
-        `请在设置中配置 ${currentModel?.provider || "当前模型"} 的 API 密钥`,
+      showToast(
+        "error",
+        t("memoriesMissingApiKey", {
+          provider: currentModel?.provider || t("settingsModelLabel"),
+        }),
       );
       return;
     }
@@ -174,7 +195,7 @@ export default function MemoriesPage() {
         setNewMemory({ content: "", category: "fact", importance: 5 });
         setShowAddForm(false);
       } else {
-        alert("添加记忆失败");
+        showToast("error", t("memoriesAddFailed"));
       }
     } catch (error) {
       console.error("Add memory error:", error);
@@ -182,22 +203,20 @@ export default function MemoriesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("确定要删除这条记忆吗？")) return;
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/memories/${id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        showToast("success", "记忆已删除");
+        showToast("success", t("memoriesDeleted"));
         await fetchMemories();
       } else {
-        showToast("error", "删除记忆失败");
+        showToast("error", t("memoriesDeleteFailed"));
       }
     } catch (error) {
       console.error("Delete error:", error);
-      showToast("error", "删除记忆失败");
+      showToast("error", t("memoriesDeleteFailed"));
     }
   };
 
@@ -211,14 +230,14 @@ export default function MemoriesPage() {
       });
 
       if (response.ok) {
-        showToast("success", "设置已保存");
+        showToast("success", t("memoriesSettingsSaved"));
         setShowSettings(false);
       } else {
-        showToast("error", "保存设置失败");
+        showToast("error", t("memoriesSettingsSaveFailed"));
       }
     } catch (error) {
       console.error("Save settings error:", error);
-      showToast("error", "保存设置失败");
+      showToast("error", t("memoriesSettingsSaveFailed"));
     } finally {
       setIsSavingSettings(false);
     }
@@ -227,7 +246,7 @@ export default function MemoriesPage() {
   const addWhitelistItem = () => {
     if (!newWhitelistItem.trim()) return;
     if (settings.whitelist_topics.includes(newWhitelistItem.trim())) {
-      showToast("error", "该主题已在白名单中");
+      showToast("error", t("memoriesTopicExistsWhitelist"));
       return;
     }
     setSettings({
@@ -247,7 +266,7 @@ export default function MemoriesPage() {
   const addBlacklistItem = () => {
     if (!newBlacklistItem.trim()) return;
     if (settings.blacklist_topics.includes(newBlacklistItem.trim())) {
-      showToast("error", "该主题已在黑名单中");
+      showToast("error", t("memoriesTopicExistsBlacklist"));
       return;
     }
     setSettings({
@@ -266,12 +285,15 @@ export default function MemoriesPage() {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      alert("请输入搜索内容");
+      showToast("error", t("memoriesSearchContentRequired"));
       return;
     }
     if (!apiKey) {
-      alert(
-        `请在设置中配置 ${currentModel?.provider || "当前模型"} 的 API 密钥`,
+      showToast(
+        "error",
+        t("memoriesMissingApiKey", {
+          provider: currentModel?.provider || t("settingsModelLabel"),
+        }),
       );
       return;
     }
@@ -300,11 +322,13 @@ export default function MemoriesPage() {
 
   const getCategoryBadge = (category: string) => {
     const cat = categories.find((c) => c.value === category);
+    const label =
+      categoryLabels[category as keyof typeof categoryLabels] || category;
     return (
       <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cat?.color || "bg-muted text-muted-foreground"}`}
       >
-        {cat?.label || category}
+        {label}
       </span>
     );
   };
@@ -351,7 +375,7 @@ export default function MemoriesPage() {
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-sidebar-border hover:bg-sidebar-accent transition-colors text-sm font-medium"
           >
             <ArrowLeft className="h-4 w-4" />
-            返回聊天
+            {t("memoriesBackToChat")}
           </Link>
         </div>
 
@@ -360,26 +384,26 @@ export default function MemoriesPage() {
             href="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors cursor-pointer"
           >
-            首页
+            {t("memoriesHome")}
           </Link>
           <Link
             href="/knowledge"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors cursor-pointer"
           >
-            知识库
+            {t("memoriesKnowledge")}
           </Link>
-          <Link
+            <Link
             href="/memories"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm bg-sidebar-accent text-foreground transition-colors cursor-pointer"
           >
             <Brain className="h-4 w-4" />
-            记忆管理
+            {t("memoriesManagement")}
           </Link>
           <Link
             href="/settings"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors cursor-pointer"
           >
-            设置
+            {t("memoriesSettings")}
           </Link>
         </nav>
       </aside>
@@ -390,49 +414,47 @@ export default function MemoriesPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-semibold mb-2">记忆管理</h1>
-              <p className="text-muted-foreground">
-                管理自动提取的记忆，控制哪些内容会被记住
-              </p>
+              <h1 className="text-3xl font-semibold mb-2">{t("memoriesTitle")}</h1>
+              <p className="text-muted-foreground">{t("memoriesSubtitle")}</p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowSettings(true)}>
-                <Settings className="mr-2 h-4 w-4" />
-                提取设置
-              </Button>
-              <Button onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus className="mr-2 h-4 w-4" />
-                添加记忆
-              </Button>
-            </div>
+                <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setShowSettings(true)}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  {t("memoriesExtractionSettings")}
+                </Button>
+                <Button onClick={() => setShowAddForm(!showAddForm)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("memoriesAddMemory")}
+                </Button>
+              </div>
           </div>
 
           {/* Settings Summary */}
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="p-4 rounded-lg border border-border bg-card">
-              <div className="flex items-center gap-2 mb-2">
-                <Brain className="h-4 w-4 text-purple-500" />
-                <span className="text-sm font-medium">自动提取</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="h-4 w-4 text-purple-500" />
+                  <span className="text-sm font-medium">{t("memoriesAutoExtract")}</span>
+                </div>
+                <p className="text-2xl font-semibold">
+                  {settings.auto_extract ? t("memoriesAutoExtractOn") : t("memoriesAutoExtractOff")}
+                </p>
               </div>
-              <p className="text-2xl font-semibold">
-                {settings.auto_extract ? "开启" : "关闭"}
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-border bg-card">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-emerald-500" />
-                <span className="text-sm font-medium">白名单主题</span>
-              </div>
+              <div className="p-4 rounded-lg border border-border bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm font-medium">{t("memoriesWhitelistTopics")}</span>
+                </div>
               <p className="text-2xl font-semibold">
                 {settings.whitelist_topics.length}
               </p>
             </div>
             <div className="p-4 rounded-lg border border-border bg-card">
-              <div className="flex items-center gap-2 mb-2">
-                <Filter className="h-4 w-4 text-red-500" />
-                <span className="text-sm font-medium">黑名单主题</span>
-              </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Filter className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium">{t("memoriesBlacklistTopics")}</span>
+                </div>
               <p className="text-2xl font-semibold">
                 {settings.blacklist_topics.length}
               </p>
@@ -444,7 +466,7 @@ export default function MemoriesPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="搜索记忆..."
+                placeholder={t("memoriesSearchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -452,17 +474,17 @@ export default function MemoriesPage() {
               />
             </div>
             <Button variant="outline" onClick={handleSearch}>
-              搜索
+              {t("memoriesSearch")}
             </Button>
           </div>
 
           {/* Add Memory Form */}
           {showAddForm && (
             <div className="border border-border rounded-xl p-6 mb-6">
-              <h3 className="font-medium mb-4">添加新记忆</h3>
+              <h3 className="font-medium mb-4">{t("memoriesAddNewTitle")}</h3>
               <div className="space-y-4">
                 <Textarea
-                  placeholder="需要记住什么？"
+                  placeholder={t("memoriesNeedRememberWhat")}
                   value={newMemory.content}
                   onChange={(e) =>
                     setNewMemory({ ...newMemory, content: e.target.value })
@@ -477,12 +499,12 @@ export default function MemoriesPage() {
                     }
                   >
                     <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="类别" />
+                      <SelectValue placeholder={t("memoriesCategory")} />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
+                          {categoryLabels[cat.value as keyof typeof categoryLabels]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -499,16 +521,16 @@ export default function MemoriesPage() {
                       })
                     }
                     className="w-[100px]"
-                    placeholder="重要性"
+                    placeholder={t("memoriesImportance")}
                   />
                   <div className="flex-1"></div>
                   <Button
                     variant="outline"
                     onClick={() => setShowAddForm(false)}
                   >
-                    取消
+                    {t("memoriesCancel")}
                   </Button>
-                  <Button onClick={handleAddMemory}>添加</Button>
+                  <Button onClick={handleAddMemory}>{t("memoriesAdd")}</Button>
                 </div>
               </div>
             </div>
@@ -519,16 +541,16 @@ export default function MemoriesPage() {
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-2">加载中...</p>
+                <p className="text-muted-foreground mt-2">{t("memoriesLoading")}</p>
               </div>
             ) : memories.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto mb-4">
                   <Brain className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium mb-1">暂无记忆</h3>
+                <h3 className="font-medium mb-1">{t("memoriesNoMemories")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  开启记忆功能后，AI 会自动从对话中提取重要信息
+                  {t("memoriesNoMemoriesHint")}
                 </p>
               </div>
             ) : (
@@ -549,7 +571,9 @@ export default function MemoriesPage() {
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                           {getCategoryBadge(memory.category)}
                           <span>·</span>
-                          <span>重要度: {memory.importance}/10</span>
+                          <span>
+                            {t("memoriesImportanceLabel")}: {memory.importance}/10
+                          </span>
                           <span>·</span>
                           <span>
                             {new Date(memory.created_at).toLocaleDateString()}
@@ -557,15 +581,19 @@ export default function MemoriesPage() {
                           {memory.access_count > 0 && (
                             <>
                               <span>·</span>
-                              <span>已引用 {memory.access_count} 次</span>
+                              <span>
+                                {t("memoriesReferencedTimes", {
+                                  count: memory.access_count,
+                                })}
+                              </span>
                             </>
                           )}
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDelete(memory.id)}
+                        onClick={() => setPendingDeleteId(memory.id)}
                         className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors shrink-0"
-                        title="删除"
+                        title={t("memoriesDelete")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -579,31 +607,23 @@ export default function MemoriesPage() {
       </main>
 
       {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <Settings className="h-5 w-5 text-muted-foreground" />
-                <h2 className="font-semibold">记忆提取设置</h2>
-              </div>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Settings className="h-5 w-5 text-muted-foreground" />
+              {t("memoriesExtractionSettings")}
+            </DialogTitle>
+            <DialogDescription>{t("memoriesSubtitle")}</DialogDescription>
+          </DialogHeader>
 
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="space-y-6 py-2">
               {/* Auto Extract Toggle */}
               <div className="flex items-center justify-between p-4 rounded-lg border border-border">
                 <div>
-                  <p className="font-medium">自动提取记忆</p>
+                  <p className="font-medium">{t("memoriesAutoExtract")}</p>
                   <p className="text-sm text-muted-foreground">
-                    开启后，AI 会自动从对话中提取重要信息作为记忆
+                    {t("memoriesAutoExtractDescription")}
                   </p>
                 </div>
                 <button
@@ -629,9 +649,9 @@ export default function MemoriesPage() {
 
               {/* Min Importance */}
               <div className="space-y-3">
-                <label className="font-medium">最小重要度阈值</label>
+                <label className="font-medium">{t("memoriesMinImportance")}</label>
                 <p className="text-sm text-muted-foreground">
-                  只保存重要度高于此值的记忆 (1-10)
+                  {t("memoriesMinImportanceHint")}
                 </p>
                 <div className="flex items-center gap-4">
                   <input
@@ -655,9 +675,9 @@ export default function MemoriesPage() {
 
               {/* Whitelist */}
               <div className="space-y-3">
-                <label className="font-medium">白名单主题</label>
+                <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
-                  仅提取包含这些主题的记忆（为空则不限制）
+                  {t("memoriesWhitelistHint")}
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -667,7 +687,7 @@ export default function MemoriesPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") addWhitelistItem();
                     }}
-                    placeholder="添加主题..."
+                    placeholder={t("memoriesAddTopic")}
                     className="flex-1 px-3 py-2 rounded-lg border border-border bg-background"
                   />
                   <Button onClick={addWhitelistItem} size="sm">
@@ -694,9 +714,9 @@ export default function MemoriesPage() {
 
               {/* Blacklist */}
               <div className="space-y-3">
-                <label className="font-medium">黑名单主题</label>
+                <label className="font-medium">{t("memoriesBlacklistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
-                  不提取包含这些主题的记忆
+                  {t("memoriesBlacklistHint")}
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -706,7 +726,7 @@ export default function MemoriesPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") addBlacklistItem();
                     }}
-                    placeholder="添加主题..."
+                    placeholder={t("memoriesAddTopic")}
                     className="flex-1 px-3 py-2 rounded-lg border border-border bg-background"
                   />
                   <Button onClick={addBlacklistItem} size="sm">
@@ -735,22 +755,49 @@ export default function MemoriesPage() {
             {/* Modal Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
               <Button variant="outline" onClick={() => setShowSettings(false)}>
-                取消
+                {t("memoriesCancel")}
               </Button>
               <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
                 {isSavingSettings ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    保存中...
+                    {t("memoriesSaving")}
                   </>
                 ) : (
-                  "保存设置"
+                  t("memoriesSave")
                 )}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("memoriesDelete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("memoriesDeleteConfirm")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("memoriesCancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteId) {
+                  handleDelete(pendingDeleteId);
+                }
+                setPendingDeleteId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("memoriesDelete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }

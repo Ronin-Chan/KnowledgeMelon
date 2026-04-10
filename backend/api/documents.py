@@ -81,18 +81,34 @@ async def _process_document_async(
             chunks = document_service.chunk_text(text)
 
             if chunks:
-                document_processor.update_progress(job_id, total_pages * 3 // 4 if total_pages else 75, total_pages or 100, f"正在生成 {len(chunks)} 个向量嵌入...")
-
-                embeddings = await embedding_service.get_embeddings(
-                    chunks,
-                    api_key,
-                    provider,
-                    base_url if base_url else None,
-                    use_local_embedding,
+                document_processor.update_progress(
+                    job_id,
+                    total_pages * 3 // 4 if total_pages else 75,
+                    total_pages or 100,
+                    f"正在生成 0/{len(chunks)} 个向量...",
                 )
 
-                if len(embeddings) != len(chunks):
-                    raise RuntimeError("Embedding count does not match chunk count")
+                embeddings = []
+                for i, chunk_text in enumerate(chunks):
+                    embedding = await embedding_service.get_single_embedding(
+                        chunk_text,
+                        api_key,
+                        provider,
+                        base_url if base_url else None,
+                        use_local_embedding,
+                    )
+                    embeddings.append(embedding)
+                    current_progress = (
+                        int(75 + ((i + 1) / len(chunks)) * 25)
+                        if len(chunks) > 0
+                        else 100
+                    )
+                    document_processor.update_progress(
+                        job_id,
+                        current_progress,
+                        100,
+                        f"正在生成向量 {i + 1}/{len(chunks)}...",
+                    )
 
                 for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
                     session.add(
@@ -364,6 +380,7 @@ async def get_document_file(
         path=doc.file_path,
         media_type=media_type,
         filename=doc.title,
+        content_disposition_type="inline",
     )
 
 

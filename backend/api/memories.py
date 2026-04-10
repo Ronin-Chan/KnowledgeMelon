@@ -4,6 +4,7 @@ from sqlalchemy import select
 from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
+from pydantic import Field
 
 from core.database import get_session
 from models.database import Memory, MemorySetting
@@ -16,8 +17,8 @@ router = APIRouter(prefix="/api/memories", tags=["memories"])
 
 class MemorySettingsRequest(BaseModel):
     auto_extract: bool = True
-    whitelist_topics: List[str] = []
-    blacklist_topics: List[str] = []
+    whitelist_topics: List[str] = Field(default_factory=list)
+    blacklist_topics: List[str] = Field(default_factory=list)
     min_importance: int = 5
 
 

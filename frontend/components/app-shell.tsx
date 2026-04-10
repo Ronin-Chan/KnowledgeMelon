@@ -2,35 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Brain,
-  BookOpen,
-  Home,
-  MessageSquare,
-  Settings,
-} from "lucide-react";
+import { Brain, BookOpen, Home, MessageSquare, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const NAV_ITEMS = [
-  { href: "/", label: "首页", icon: Home },
-  { href: "/chat", label: "聊天", icon: MessageSquare },
-  { href: "/knowledge", label: "知识库", icon: BookOpen },
-  { href: "/memories", label: "记忆", icon: Brain },
-  { href: "/settings", label: "设置", icon: Settings },
+  { href: "/", labelKey: "navHome", icon: Home },
+  { href: "/chat", labelKey: "navChat", icon: MessageSquare },
+  { href: "/knowledge", labelKey: "navKnowledge", icon: BookOpen },
+  { href: "/memories", labelKey: "navMemories", icon: Brain },
+  { href: "/settings", labelKey: "navSettings", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <div className="min-h-screen bg-background flex">
       <aside className="w-72 shrink-0 border-r border-sidebar-border bg-sidebar-background/95 backdrop-blur flex flex-col">
         <div className="px-5 py-5 border-b border-sidebar-border">
           <div className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
-            Knowledge Assistant
+            {t("appName")}
           </div>
           <div className="mt-2 text-sm text-muted-foreground">
-            你的知识、记忆与对话工作台
+            {t("appTagline")}
           </div>
         </div>
 
@@ -54,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium">{t(item.labelKey)}</span>
               </Link>
             );
           })}
@@ -67,3 +63,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

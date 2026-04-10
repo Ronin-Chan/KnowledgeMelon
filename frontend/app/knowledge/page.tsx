@@ -18,8 +18,26 @@ import {
   Download,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api";
+import { resolveEmbeddingConfig } from "@/lib/embedding";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { useT } from "@/lib/i18n";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 interface Document {
   id: string;
@@ -50,9 +68,6 @@ interface DocumentStatus {
   progress?: ProcessingProgress;
 }
 
-// Providers that support embeddings
-const EMBEDDING_PROVIDERS = ["openai", "alibaba", "zhipu", "moonshot"];
-
 export default function KnowledgePage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -74,12 +89,15 @@ export default function KnowledgePage() {
   }>({});
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [nextStartPage, setNextStartPage] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pagesPerLoad] = useState<number>(20); // Load 20 pages at a time
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const previewRequestTokenRef = useRef<number>(0);
   const initialPreviewAbortRef = useRef<AbortController | null>(null);
   const loadMoreAbortRef = useRef<AbortController | null>(null);
+  const t = useT();
+  const tRef = useRef(t);
   const {
     apiKeys,
     openaiApiKey,
@@ -89,13 +107,21 @@ export default function KnowledgePage() {
     setUseLocalEmbedding,
   } = useSettingsStore();
 
-  // Get current model's provider and API key
-  const currentModel = SUPPORTED_MODELS.find((m) => m.id === model);
-  const provider = currentModel?.provider || "openai";
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
+  // Use a capable embedding provider rather than the chat model blindly.
+  const provider = SUPPORTED_MODELS.find((m) => m.id === model)?.provider || "openai";
   const isPdfPreview = viewingDoc?.file_type === ".pdf";
-  const apiKey =
-    apiKeys[provider] || (provider === "openai" ? openaiApiKey : "") || "";
-  const baseUrl = baseUrls[provider] || "";
+  const isMarkdownPreview = viewingDoc?.file_type === ".md";
+  const embeddingConfig = resolveEmbeddingConfig({
+    apiKeys,
+    openaiApiKey,
+    baseUrls,
+    currentProvider: provider,
+    useLocalEmbedding,
+  });
 
   // Toast helper
   const showToast = useCallback((type: Toast["type"], message: string) => {
@@ -115,7 +141,7 @@ export default function KnowledgePage() {
       }
     } catch (error) {
       console.error("Failed to fetch documents:", error);
-      showToast("error", "获取文档列表失败");
+      showToast("error", tRef.current("knowledgeFetchDocumentsFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +149,16 @@ export default function KnowledgePage() {
 
   useEffect(() => {
     fetchDocuments();
+  }, [fetchDocuments]);
+
+  useEffect(() => {
+    const refreshDocuments = () => {
+      fetchDocuments();
+    };
+
+    window.addEventListener("knowledge-documents-updated", refreshDocuments);
+    return () =>
+      window.removeEventListener("knowledge-documents-updated", refreshDocuments);
   }, [fetchDocuments]);
 
   // Check local Ollama status
@@ -170,7 +206,9 @@ export default function KnowledgePage() {
   useEffect(() => {
     const processingDocs = documents.filter((d) => d.status === "processing");
     if (processingDocs.length === 0) {
-      setProcessingStatus({});
+      setProcessingStatus((prev) =>
+        Object.keys(prev).length === 0 ? prev : {},
+      );
       return;
     }
 
@@ -186,20 +224,12 @@ export default function KnowledgePage() {
   }, [documents, fetchDocuments, fetchProcessingStatus]);
 
   const processFile = async (file: File) => {
-    // If using local embedding, don't need cloud API key
-    if (!useLocalEmbedding && !apiKey) {
+    if (!embeddingConfig) {
       showToast(
         "error",
-        `请在设置中配置 ${currentModel?.provider || "当前模型"} 的 API 密钥`,
-      );
-      return;
-    }
-
-    // Check if provider supports embeddings (only if not using local)
-    if (!useLocalEmbedding && !EMBEDDING_PROVIDERS.includes(provider)) {
-      showToast(
-        "error",
-        `当前模型 ${currentModel?.name} 不支持文档嵌入，请切换到 OpenAI、阿里云、智谱或 Moonshot 模型`,
+        t("knowledgeMissingApiKey", {
+          provider: t("settingsModelLabel"),
+        }),
       );
       return;
     }
@@ -210,27 +240,33 @@ export default function KnowledgePage() {
     if (!fileExt || !allowedTypes.includes(fileExt)) {
       showToast(
         "error",
-        `不支持的文件格式。仅支持: ${allowedTypes.join(", ")}`,
+        t("knowledgeUnsupportedFileType", {
+          types: allowedTypes.join(", "),
+        }),
       );
       return;
     }
 
     setIsUploading(true);
-    setUploadProgress("正在上传...");
+    setUploadProgress(t("knowledgeUploadLoading"));
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      setUploadProgress("正在处理文档...");
+      setUploadProgress(t("knowledgeLoadingDocumentContent"));
       const params = new URLSearchParams();
-      // Only pass API key if not using local embedding
-      if (!useLocalEmbedding) {
-        params.append("api_key", apiKey);
-        params.append("provider", provider);
-        if (baseUrl) params.append("base_url", baseUrl);
+      if (!embeddingConfig.useLocalEmbedding) {
+        params.append("api_key", embeddingConfig.apiKey);
+        params.append("provider", embeddingConfig.provider);
+        if (embeddingConfig.baseUrl) {
+          params.append("base_url", embeddingConfig.baseUrl);
+        }
       }
-      params.append("use_local_embedding", useLocalEmbedding.toString());
+      params.append(
+        "use_local_embedding",
+        embeddingConfig.useLocalEmbedding.toString(),
+      );
 
       const response = await fetch(
         `${API_BASE_URL}/api/documents/upload?${params.toString()}`,
@@ -242,10 +278,11 @@ export default function KnowledgePage() {
 
       if (response.ok) {
         await response.json();
-        showToast("success", `文档 "${file.name}" 上传成功`);
+        showToast("success", t("knowledgeUploadSuccess", { name: file.name }));
         await fetchDocuments();
+        window.dispatchEvent(new Event("knowledge-documents-updated"));
       } else {
-        let errorMsg = "上传失败";
+        let errorMsg = t("knowledgeUploadFailed");
         try {
           const errorData = await response.json();
           errorMsg =
@@ -253,11 +290,11 @@ export default function KnowledgePage() {
         } catch {
           errorMsg = await response.text();
         }
-        showToast("error", `上传失败: ${errorMsg}`);
+        showToast("error", `${t("knowledgeUploadFailed")}: ${errorMsg}`);
       }
     } catch (error) {
       console.error("Upload error:", error);
-      showToast("error", "上传文档失败，请检查网络连接");
+      showToast("error", t("knowledgeUploadDocumentFailed"));
     } finally {
       setIsUploading(false);
       setUploadProgress("");
@@ -271,9 +308,11 @@ export default function KnowledgePage() {
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    await processFile(file);
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+    for (const file of files) {
+      await processFile(file);
+    }
   };
 
   // Drag and drop handlers
@@ -320,33 +359,31 @@ export default function KnowledgePage() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        showToast("success", `开始下载: ${doc.title}`);
+        showToast("success", t("knowledgeDownloadStarted", { name: doc.title }));
       } else {
-        showToast("error", "下载失败");
+        showToast("error", t("knowledgeDownloadFailed"));
       }
     } catch (error) {
       console.error("Download error:", error);
-      showToast("error", "下载文档失败");
+      showToast("error", t("knowledgeDownloadFailed"));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("确定要删除此文档吗？")) return;
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/documents/${id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        showToast("success", "文档已删除");
+        showToast("success", t("knowledgeDocumentDeleted"));
         await fetchDocuments();
       } else {
-        showToast("error", "删除文档失败");
+        showToast("error", t("knowledgeDocumentDeleteFailed"));
       }
     } catch (error) {
       console.error("Delete error:", error);
-      showToast("error", "删除文档失败");
+      showToast("error", t("knowledgeDocumentDeleteFailed"));
     }
   };
 
@@ -395,7 +432,7 @@ export default function KnowledgePage() {
           setCurrentPage(0);
           setNextStartPage(null);
         } else {
-          showToast("error", "无法加载 PDF 预览信息");
+          showToast("error", t("knowledgeLoadPreviewInfoFailed"));
           setViewingDoc(null);
         }
       } catch (error) {
@@ -408,7 +445,7 @@ export default function KnowledgePage() {
         }
 
         console.error("PDF preview info error:", error);
-        showToast("error", "加载 PDF 预览失败");
+        showToast("error", t("knowledgeLoadPreviewFailed"));
         setViewingDoc(null);
       } finally {
         if (previewRequestTokenRef.current === requestToken) {
@@ -458,7 +495,7 @@ export default function KnowledgePage() {
             : null,
         );
       } else {
-        showToast("error", "无法加载文档内容");
+        showToast("error", t("knowledgeLoadContentFailed"));
         setViewingDoc(null);
       }
     } catch (error) {
@@ -471,7 +508,7 @@ export default function KnowledgePage() {
       }
 
       console.error("View error:", error);
-      showToast("error", "加载文档内容失败");
+      showToast("error", t("knowledgeLoadContentFailed"));
       setViewingDoc(null);
     } finally {
       if (previewRequestTokenRef.current === requestToken) {
@@ -532,7 +569,7 @@ export default function KnowledgePage() {
             : null,
         );
       } else {
-        showToast("error", "加载更多内容失败");
+        showToast("error", t("knowledgeLoadMoreFailed"));
       }
     } catch (error) {
       if (previewRequestTokenRef.current !== requestToken) {
@@ -544,7 +581,7 @@ export default function KnowledgePage() {
       }
 
       console.error("Load more error:", error);
-      showToast("error", "加载更多内容失败");
+      showToast("error", t("knowledgeLoadMoreFailed"));
     } finally {
       if (previewRequestTokenRef.current === requestToken) {
         setIsLoadingMore(false);
@@ -559,6 +596,7 @@ export default function KnowledgePage() {
     pagesPerLoad,
     isPdfPreview,
     showToast,
+    t,
   ]);
 
   useEffect(() => {
@@ -620,15 +658,16 @@ export default function KnowledgePage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "completed":
-        return "已就绪";
+        return t("knowledgeReady");
       case "processing":
-        return "处理中";
+        return t("knowledgeProcessing");
       case "failed":
-        return "失败";
+        return t("knowledgeFailed");
       default:
         return status;
     }
   };
+  const processingDocuments = documents.filter((doc) => doc.status === "processing");
 
   return (
     <AppShell>
@@ -661,7 +700,7 @@ export default function KnowledgePage() {
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-sidebar-border hover:bg-sidebar-accent transition-colors text-sm font-medium"
           >
             <ArrowLeft className="h-4 w-4" />
-            返回聊天
+            {t("knowledgeBackToChat")}
           </Link>
         </div>
 
@@ -670,13 +709,13 @@ export default function KnowledgePage() {
             href="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors cursor-pointer"
           >
-            首页
+            {t("knowledgeHome")}
           </Link>
           <Link
             href="/settings"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors cursor-pointer"
           >
-            设置
+            {t("knowledgeSettings")}
           </Link>
         </nav>
       </aside>
@@ -687,10 +726,8 @@ export default function KnowledgePage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-semibold mb-2">知识库</h1>
-              <p className="text-muted-foreground">
-                上传文档以启用 RAG 智能检索功能
-              </p>
+              <h1 className="text-3xl font-semibold mb-2">{t("knowledgeTitle")}</h1>
+              <p className="text-muted-foreground">{t("knowledgeSubtitle")}</p>
             </div>
 
             <div>
@@ -698,6 +735,7 @@ export default function KnowledgePage() {
                 type="file"
                 ref={fileInputRef}
                 accept=".pdf,.docx,.txt,.md"
+                multiple
                 onChange={handleFileUpload}
                 className="hidden"
                 disabled={isUploading}
@@ -710,12 +748,12 @@ export default function KnowledgePage() {
                 {isUploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    上传中...
+                    {t("knowledgeUploadLoading")}
                   </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    上传文档
+                    {t("knowledgeUploadDocument")}
                   </>
                 )}
               </Button>
@@ -729,11 +767,13 @@ export default function KnowledgePage() {
                 className={`w-2 h-2 rounded-full ${localOllamaStatus ? "bg-emerald-500" : "bg-gray-400"}`}
               />
               <div>
-                <p className="text-sm font-medium">使用本地 Ollama Embedding</p>
+                <p className="text-sm font-medium">
+                  {t("knowledgeUseLocalEmbedding")}
+                </p>
                 <p className="text-xs text-gray-500">
                   {localOllamaStatus
-                    ? "已检测到 nomic-embed-text 模型"
-                    : "未检测到本地 Ollama (nomic-embed-text)"}
+                    ? t("knowledgeLocalEmbeddingDetected")
+                    : t("knowledgeLocalEmbeddingMissing")}
                 </p>
               </div>
             </div>
@@ -753,6 +793,51 @@ export default function KnowledgePage() {
               />
             </button>
           </div>
+
+          {processingDocuments.length > 0 && (
+            <div className="mb-6 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/20 p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="font-medium text-blue-700 dark:text-blue-300">
+                    {t("knowledgeProcessing")}
+                  </p>
+                  <p className="text-xs text-blue-600/80 dark:text-blue-400/80">
+                    {t("knowledgePleaseDoNotClosePage")}
+                  </p>
+                </div>
+                <div className="text-xs text-blue-600 dark:text-blue-300">
+                  {t("knowledgeProcessing")} × {processingDocuments.length}
+                </div>
+              </div>
+              <div className="space-y-3">
+                {processingDocuments.map((doc) => {
+                  const progress = processingStatus[doc.id]?.progress;
+                  const message = processingStatus[doc.id]?.progress?.message;
+                  return (
+                    <div key={doc.id} className="rounded-lg bg-white/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="truncate font-medium text-blue-900 dark:text-blue-100">
+                          {doc.title}
+                        </span>
+                        <span className="shrink-0 text-xs text-blue-700 dark:text-blue-300">
+                          {progress?.percent ?? 0}%
+                        </span>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
+                        <div
+                          className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                          style={{ width: `${progress?.percent ?? 0}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">
+                        {message || t("knowledgeLoadingDocumentContent")}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Drag & Drop Zone */}
           <div
@@ -778,16 +863,16 @@ export default function KnowledgePage() {
               <>
                 <p className="font-medium text-foreground">{uploadProgress}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  请勿关闭页面
+                  {t("knowledgePleaseDoNotClosePage")}
                 </p>
               </>
             ) : (
               <>
                 <p className="font-medium text-foreground">
-                  拖拽文件到此处，或点击上传
+                  {t("knowledgeDragDropHint")}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  支持 PDF、Word、TXT、Markdown 格式
+                  {t("knowledgeSupportedFormats")}
                 </p>
               </>
             )}
@@ -798,23 +883,23 @@ export default function KnowledgePage() {
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-2">加载中...</p>
+                <p className="text-muted-foreground mt-2">{t("knowledgeLoading")}</p>
               </div>
             ) : documents.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto mb-4">
                   <FileText className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium mb-1">暂无文档</h3>
+                <h3 className="font-medium mb-1">{t("knowledgeNoDocuments")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  上传 PDF、Word、TXT 或 Markdown 文件以启用语义搜索
+                  {t("knowledgeNoDocumentsHint")}
                 </p>
               </div>
             ) : (
               <div className="divide-y divide-border">
                 {documents.map((doc) =>
                   (() => {
-                    const canPreview = doc.status === "completed";
+                    const canPreview = doc.status !== "failed";
                     return (
                       <div
                         key={doc.id}
@@ -871,7 +956,7 @@ export default function KnowledgePage() {
                               handleDownload(doc);
                             }}
                             className="p-2 hover:bg-emerald-500/10 hover:text-emerald-600 rounded-lg transition-colors"
-                            title="下载原文件"
+                            title={t("knowledgeDownloadOriginal")}
                           >
                             <Download className="h-4 w-4" />
                           </button>
@@ -889,8 +974,8 @@ export default function KnowledgePage() {
                             }`}
                             title={
                               canPreview
-                                ? "查看解析内容"
-                                : "文档处理中，暂不可预览"
+                                ? t("knowledgeViewParsed")
+                                : t("knowledgePreviewUnavailable")
                             }
                           >
                             <Eye className="h-4 w-4" />
@@ -898,10 +983,10 @@ export default function KnowledgePage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(doc.id);
+                              setPendingDeleteId(doc.id);
                             }}
                             className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
-                            title="删除"
+                            title={t("knowledgeDelete")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -917,9 +1002,10 @@ export default function KnowledgePage() {
       </main>
 
       {/* Document View Modal */}
-      {viewingDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
+          {viewingDoc && (
+            <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
@@ -944,18 +1030,22 @@ export default function KnowledgePage() {
             {docInfo.total_pages && (
               <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <FileDigit className="h-3.5 w-3.5" />共 {docInfo.total_pages}{" "}
-                  页
+                  <FileDigit className="h-3.5 w-3.5" />
+                  {t("knowledgeTotalPages", { count: docInfo.total_pages })}
                 </span>
                 {docInfo.file_size_mb && <span>{docInfo.file_size_mb} MB</span>}
                 {!isPdfPreview && (
                   <span>
-                    已加载 {Math.min(currentPage, docInfo.total_pages)} /{" "}
-                    {docInfo.total_pages} 页
+                    {t("knowledgeLoadedPages", {
+                      current: Math.min(currentPage, docInfo.total_pages),
+                      total: docInfo.total_pages,
+                    })}
                   </span>
                 )}
                 {!isPdfPreview && currentPage < docInfo.total_pages && (
-                  <span className="text-amber-500">(向下滚动加载更多)</span>
+                  <span className="text-amber-500">
+                    ({t("knowledgeScrollForMore")})
+                  </span>
                 )}
               </div>
             )}
@@ -984,7 +1074,9 @@ export default function KnowledgePage() {
               {isLoadingContent ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">加载文档内容...</p>
+                  <p className="text-muted-foreground">
+                    {t("knowledgeLoadingDocumentContent")}
+                  </p>
                 </div>
               ) : isPdfPreview ? (
                 <div className="h-full min-h-[480px] rounded-lg overflow-hidden border border-border bg-muted/30">
@@ -994,8 +1086,68 @@ export default function KnowledgePage() {
                     className="w-full h-full min-h-[480px]"
                   />
                 </div>
+              ) : isMarkdownPreview ? (
+                <div className="max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary underline underline-offset-2"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      code: ({ className, children, ...props }) => {
+                        const isInline = !className?.includes("language-");
+                        return isInline ? (
+                          <code
+                            className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]"
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        ) : (
+                          <pre className="my-4 overflow-x-auto rounded-xl bg-muted p-4">
+                            <code className="font-mono text-sm leading-6" {...props}>
+                              {children}
+                            </code>
+                          </pre>
+                        );
+                      },
+                      h1: ({ children }) => <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">{children}</h1>,
+                      h2: ({ children }) => <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">{children}</h2>,
+                      h3: ({ children }) => <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">{children}</h3>,
+                      p: ({ children }) => <p className="my-3 leading-7">{children}</p>,
+                      ul: ({ children }) => <ul className="my-4 ml-6 list-disc space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="my-4 ml-6 list-decimal space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="leading-7">{children}</li>,
+                      table: ({ children }) => (
+                        <div className="my-4 overflow-x-auto">
+                          <table className="w-full border-collapse border border-border">{children}</table>
+                        </div>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border border-border px-3 py-2 align-top">{children}</td>
+                      ),
+                      blockquote: ({ children }) => (
+                        <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
+                          {children}
+                        </blockquote>
+                      ),
+                    }}
+                  >
+                    {docContent}
+                  </ReactMarkdown>
+                </div>
               ) : (
-                <div className="prose dark:prose-invert max-w-none">
+                <div className="max-w-none">
                   <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
                     {docContent}
                   </pre>
@@ -1006,7 +1158,7 @@ export default function KnowledgePage() {
                         <>
                           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">
-                            加载更多内容...
+                            {t("knowledgeLoadingMoreContent")}
                           </span>
                         </>
                       ) : (
@@ -1014,7 +1166,7 @@ export default function KnowledgePage() {
                           onClick={() => void loadMorePages()}
                           className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
                         >
-                          加载下一批页面
+                          {t("knowledgeLoadNextBatch")}
                         </button>
                       )}
                     </div>
@@ -1031,8 +1183,10 @@ export default function KnowledgePage() {
                 !isPdfPreview && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      第 {Math.min(currentPage, docInfo.total_pages)} /{" "}
-                      {docInfo.total_pages} 页
+                      {t("knowledgeLoadedPages", {
+                        current: Math.min(currentPage, docInfo.total_pages),
+                        total: docInfo.total_pages,
+                      })}
                     </span>
                   </div>
                 )}
@@ -1041,13 +1195,42 @@ export default function KnowledgePage() {
                   onClick={closeViewModal}
                   className="px-4 py-2 rounded-lg bg-background border border-border hover:bg-muted transition-colors text-sm font-medium"
                 >
-                  关闭
+                  {t("knowledgeClose")}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("knowledgeDelete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("knowledgeDeleteConfirm")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("chatCancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteId) {
+                  handleDelete(pendingDeleteId);
+                }
+                setPendingDeleteId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("knowledgeDelete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }

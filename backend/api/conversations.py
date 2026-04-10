@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from core.database import get_session
 from services.conversation_service import conversation_service
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 class ConversationCreate(BaseModel):
     title: Optional[str] = None
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
 
 
 class ConversationUpdate(BaseModel):
@@ -38,8 +38,7 @@ class ConversationResponse(BaseModel):
     message_count: int
     total_tokens: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.post("", response_model=ConversationResponse)

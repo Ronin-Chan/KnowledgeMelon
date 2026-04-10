@@ -124,6 +124,32 @@ class DocumentService:
         markdown_text = pymupdf4llm.to_markdown(file_path, pages=pages)
         return markdown_text if isinstance(markdown_text, str) else ""
 
+    def _parse_pdf_pages_with_pymupdf4llm(
+        self, file_path: str, start_page: int = 0, end_page: int = None
+    ) -> list[str]:
+        if pymupdf4llm is None:
+            return []
+
+        doc = fitz.open(file_path) if fitz is not None else None
+        total_pages = doc.page_count if doc is not None else 0
+        if doc is not None:
+            doc.close()
+
+        if total_pages <= 0:
+            return []
+
+        start = max(0, start_page)
+        end = min(total_pages, end_page) if end_page is not None else total_pages
+        if end <= start:
+            return []
+
+        pages: list[str] = []
+        for page_index in range(start, end):
+            page_markdown = pymupdf4llm.to_markdown(file_path, pages=[page_index])
+            if isinstance(page_markdown, str):
+                pages.append(page_markdown)
+        return pages
+
     def _parse_pdf_with_pypdf(
         self, file_path: str, start_page: int = 0, end_page: int = None
     ) -> str:
