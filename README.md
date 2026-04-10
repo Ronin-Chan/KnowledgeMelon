@@ -55,7 +55,19 @@ KnowledgeMelon/
 
 ## Getting Started
 
-### 1. Start PostgreSQL
+### 1. One-Click Start
+
+From the repository root, run:
+
+```powershell
+.\start-dev.ps1
+```
+
+If you prefer double-clicking in Windows Explorer, run `start-dev.bat` instead.
+
+This startup script starts PostgreSQL first, waits for the database container to become healthy, and then launches the backend and frontend.
+
+### 2. Start PostgreSQL Manually
 
 From the repository root:
 
@@ -65,7 +77,7 @@ docker-compose up -d
 
 The database container is exposed on `localhost:5433`.
 
-### 2. Configure the Backend
+### 3. Configure the Backend
 
 Create a `backend/.env` file if you need to override defaults:
 
@@ -77,7 +89,7 @@ APP_SECRET=your_secret_here
 
 If you are not using Docker Compose, adjust `DATABASE_URL` to match your local PostgreSQL setup.
 
-### 3. Run the Backend
+### 4. Run the Backend
 
 ```bash
 cd backend
@@ -89,7 +101,7 @@ python main.py
 
 The API runs at `http://localhost:8000`.
 
-### 4. Run the Frontend
+### 5. Run the Frontend
 
 ```bash
 cd frontend
@@ -98,6 +110,31 @@ npm run dev
 ```
 
 The app runs at `http://localhost:3000`.
+
+## Local Ollama Embeddings
+
+The Knowledge page can use local embeddings through Ollama.
+
+### How It Works
+
+- The app checks `http://localhost:11434/api/tags` to detect a local Ollama instance.
+- If it finds a local embedding model, the `Use local embeddings` toggle becomes available in the Knowledge page.
+- The backend uses Ollama's embedding endpoint when `use_local_embedding` is enabled.
+
+### Setup
+
+1. Install Ollama.
+2. Pull a local embedding model:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+3. Make sure Ollama is running on `http://localhost:11434`.
+4. If needed, start it with `ollama serve`.
+5. Open the Knowledge page and enable `Use local embeddings`.
+
+Note: `start-dev.ps1` does not start Ollama for you. It only starts PostgreSQL, the backend, and the frontend.
 
 ## Useful Scripts
 
@@ -116,6 +153,14 @@ npm run lint
 python main.py
 uvicorn main:app --reload
 ```
+
+### Root
+
+```powershell
+.\start-dev.ps1
+```
+
+Or double-click `start-dev.bat` on Windows.
 
 ## API Overview
 
