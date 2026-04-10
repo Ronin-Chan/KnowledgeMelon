@@ -1,6 +1,6 @@
 """
-Agent Tool Service - Provides tools for LLM agent to use
-Includes: Web search, calculator, datetime, etc.
+Agent 工具服务 - 为 LLM 代理提供可用工具。
+包含：联网搜索、计算器、日期时间等。
 """
 
 import json
@@ -12,7 +12,7 @@ import asyncio
 
 
 class Tool:
-    """Tool definition"""
+    """工具定义。"""
 
     def __init__(
         self,
@@ -27,7 +27,7 @@ class Tool:
         self.func = func
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to OpenAI function calling format"""
+        """转换为 OpenAI function calling 格式。"""
         return {
             "type": "function",
             "function": {
@@ -39,14 +39,14 @@ class Tool:
 
 
 class ToolsService:
-    """Service to manage and execute tools"""
+    """管理和执行工具的服务。"""
 
     def __init__(self):
         self.tools: Dict[str, Tool] = {}
         self._register_default_tools()
 
     def _register_default_tools(self):
-        """Register default tools"""
+        """注册默认工具。"""
         self.register_tool(
             name="get_current_datetime",
             description="Get the current date and time",
@@ -55,7 +55,7 @@ class ToolsService:
                 "properties": {
                     "timezone": {
                         "type": "string",
-                        "description": "Timezone (e.g., 'UTC', 'Asia/Shanghai'). Defaults to local time."
+                        "description": "时区（例如 'UTC'、'Asia/Shanghai'），默认使用本地时间。"
                     }
                 },
                 "required": []
@@ -65,13 +65,13 @@ class ToolsService:
 
         self.register_tool(
             name="calculator",
-            description="Perform mathematical calculations",
+            description="执行数学计算",
             parameters={
                 "type": "object",
                 "properties": {
                     "expression": {
                         "type": "string",
-                        "description": "Mathematical expression to evaluate (e.g., '2 + 2', 'sin(30)', 'sqrt(16)')"
+                        "description": "要计算的数学表达式（例如 '2 + 2'、'sin(30)'、'sqrt(16)'）"
                     }
                 },
                 "required": ["expression"]
@@ -81,17 +81,17 @@ class ToolsService:
 
         self.register_tool(
             name="web_search",
-            description="Search the web for information",
+            description="在网上搜索信息",
             parameters={
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Search query"
+                        "description": "搜索关键词"
                     },
                     "num_results": {
                         "type": "integer",
-                        "description": "Number of results to return (1-10)",
+                        "description": "返回结果数量（1-10）",
                         "default": 5
                     }
                 },
@@ -107,19 +107,19 @@ class ToolsService:
         parameters: Dict[str, Any],
         func: Callable[..., Any]
     ):
-        """Register a new tool"""
+        """注册一个新工具。"""
         self.tools[name] = Tool(name, description, parameters, func)
 
     def get_tools(self) -> List[Dict[str, Any]]:
-        """Get all tools in OpenAI format"""
+        """以 OpenAI 格式获取所有工具。"""
         return [tool.to_dict() for tool in self.tools.values()]
 
     def get_tool(self, name: str) -> Optional[Tool]:
-        """Get a specific tool"""
+        """获取指定工具。"""
         return self.tools.get(name)
 
     async def execute_tool(self, name: str, arguments: Dict[str, Any]) -> str:
-        """Execute a tool with given arguments"""
+        """使用给定参数执行工具。"""
         tool = self.tools.get(name)
         if not tool:
             return f"Error: Tool '{name}' not found"
@@ -130,9 +130,9 @@ class ToolsService:
         except Exception as e:
             return f"Error executing tool '{name}': {str(e)}"
 
-    # Tool implementations
+    # 工具实现。
     def _get_current_datetime(self, timezone: str = None) -> Dict[str, Any]:
-        """Get current datetime"""
+        """获取当前日期时间。"""
         now = datetime.now()
         return {
             "datetime": now.isoformat(),
@@ -142,17 +142,17 @@ class ToolsService:
         }
 
     def _calculator(self, expression: str) -> Dict[str, Any]:
-        """Safe calculator - only allows basic math operations"""
-        # Whitelist of allowed characters
+        """安全计算器，只允许基础数学运算。"""
+        # 允许字符白名单。
         allowed_pattern = r'^[\d\+\-\*\/\(\)\.\s\^sinocstalgrpeq]+$'
         if not re.match(allowed_pattern, expression.lower()):
             return {"error": "Invalid characters in expression"}
 
         try:
-            # Replace ^ with ** for power
+            # 将 ^ 替换为 **，表示幂运算。
             expr = expression.replace('^', '**')
 
-            # Basic math functions
+            # 基础数学函数。
             safe_dict = {
                 'sqrt': lambda x: x ** 0.5,
                 'sin': lambda x: __import__('math').sin(x),
@@ -173,12 +173,12 @@ class ToolsService:
                 "result": result
             }
         except Exception as e:
-            return {"error": f"Calculation error: {str(e)}"}
+            return {"error": f"计算错误: {str(e)}"}
 
     async def _web_search(self, query: str, num_results: int = 5) -> Dict[str, Any]:
-        """Web search using DuckDuckGo"""
+        """使用 DuckDuckGo 进行网页搜索。"""
         try:
-            # Use DuckDuckGo HTML search (no API key required)
+            # 使用 DuckDuckGo 的 HTML 搜索接口（不需要 API key）。
             import aiohttp
 
             search_url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
@@ -194,7 +194,7 @@ class ToolsService:
                     if response.status == 200:
                         html = await response.text()
 
-                        # Parse results
+                        # 解析结果。
                         from bs4 import BeautifulSoup
                         soup = BeautifulSoup(html, 'html.parser')
                         results = []
@@ -223,5 +223,5 @@ class ToolsService:
             return {"error": f"Search error: {str(e)}"}
 
 
-# Global instance
+# 全局实例。
 tools_service = ToolsService()

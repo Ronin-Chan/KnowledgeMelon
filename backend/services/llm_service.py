@@ -13,6 +13,8 @@ acompletion = getattr(litellm, "acompletion")
 
 
 def _to_text(value: Any) -> str:
+    # LiteLLM / OpenAI 兼容层返回的 content 可能是 string，也可能是分片结构。
+    # 这里统一把各种可能形态压平成纯文本，方便后面拼 prompt 和处理工具调用结果。
     if isinstance(value, str):
         return value
     if isinstance(value, list):
@@ -33,10 +35,12 @@ class LLMService:
     WEB_SEARCH_TOOL_NAME = "web_search"
 
     def infer_provider(self, model: str, base_url: Optional[str] = None) -> str:
-        """Public wrapper for provider inference."""
+        """根据模型名 / base_url 推断实际提供商。"""
         return self._infer_provider(model, base_url)
 
     def _infer_provider(self, model: str, base_url: Optional[str] = None) -> str:
+        # 这个项目允许用户自由切换模型和代理地址，所以不能只靠 model 字符串。
+        # 这里通过模型名和 base_url 一起推断提供商，后续知识库、记忆、embedding 都会复用这个判断。
         model_name = (model or "").lower()
         url = (base_url or "").lower()
 
@@ -51,6 +55,8 @@ class LLMService:
     def _normalize_history(
         self, history: Optional[List[Any]]
     ) -> List[Dict[str, str]]:
+        # 前端传来的历史消息可能是 dict，也可能是 ORM / Pydantic 结构。
+        # 这里统一成标准聊天消息格式，确保后面的模型调用只关心 role/content。
         normalized: List[Dict[str, str]] = []
         if not history:
             return normalized
@@ -71,6 +77,11 @@ class LLMService:
         return normalized
 
     def _extract_chunk_text(self, chunk: Any) -> str:
+        # 模型流式输出的 chunk 格式并不稳定：
+        # - 有时是字符串
+        # - 有时是 OpenAI 风格对象
+        # - 有时是 dict
+        # 这里做统一提取，保证前端始终收到可直接渲染的纯文本。
         if chunk is None:
             return ""
         if isinstance(chunk, str):
@@ -108,6 +119,8 @@ class LLMService:
         return ""
 
     def _get_web_search_tool_defs(self) -> List[Dict[str, Any]]:
+        # 只暴露 web_search 这一类工具，避免模型在当前版本拿到过多可执行能力。
+        # 这样既能联网搜索，又能把风险范围控制住。
         web_search_tool = tools_service.get_tool(self.WEB_SEARCH_TOOL_NAME)
         if not web_search_tool:
             return []
@@ -119,6 +132,8 @@ class LLMService:
         max_chars_per_attachment: int = 8000,
         max_total_chars: int = 16000,
     ) -> str:
+        # 当前会话附件不是知识库的一部分，它只在这一轮对话里临时生效。
+        # 所以这里会把附件内容压成一段“临时上下文”，然后和 system prompt 拼到一起。
         if not attachments:
             return ""
 
@@ -139,6 +154,7 @@ class LLMService:
             if not cleaned_content:
                 continue
 
+            # 单个附件会被截断，避免一份超长文件把上下文窗口吃满。
             truncated_content = cleaned_content[:max_chars_per_attachment]
             section = (
                 f"- File: {name}\n"
@@ -169,13 +185,18 @@ class LLMService:
         use_memory: bool,
         attachments: Optional[List[Any]] = None,
     ) -> List[Dict[str, Any]]:
+        # 这里是整个 AI 请求链路最关键的地方：
+        # 把知识库、记忆、附件、历史消息统一拼成最终发给模型的 messages。
         provider = self._infer_provider(model, base_url)
 
         prompt_sections: List[str] = [
+            # system prompt 作为最底层规则，先定义助手的基本行为。
             "You are a helpful assistant. Answer clearly and accurately."
         ]
 
         if use_rag and session and api_key:
+            # RAG：从知识库里取和当前问题最相关的文档片段。
+            # 这里只是把检索结果拼进 prompt，不直接让模型“自己去查数据库”。
             rag_context = await rag_service.get_context_for_query(
                 query=message,
                 api_key=api_key,
@@ -189,6 +210,8 @@ class LLMService:
                 )
 
         if use_memory and session and api_key:
+            # Memory：从长期记忆里取和当前问题相关的用户信息。
+            # 它更像用户画像，而不是文档知识。
             memory_context = await memory_service.get_memory_context(
                 query=message,
                 api_key=api_key,
@@ -201,8 +224,13 @@ class LLMService:
 
         attachment_context = self._format_attachments_context(attachments)
         if attachment_context:
+            # 当前会话附件只在这一轮临时可见，不写入知识库。
             prompt_sections.append(attachment_context)
 
+        # 最终消息顺序：
+        # 1. system：基础规则 + 检索上下文
+        # 2. history：过去对话
+        # 3. user：当前问题
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": "\n\n".join(prompt_sections)}
         ]
@@ -223,6 +251,8 @@ class LLMService:
         session: Optional[AsyncSession] = None,
         history: Optional[List[Any]] = None,
     ) -> AsyncIterable[str]:
+        # 先把最终上下文拼好，再交给模型。
+        # 这样上层只需要控制“开没开 RAG / Memory / Tools”，不用关心 prompt 细节。
         messages = await self._build_messages(
             message=message,
             history=history,
@@ -242,8 +272,12 @@ class LLMService:
         }
 
         if use_tools:
+            # 工具模式是“两段式”：
+            # 1) 先让模型决定是否要调用工具
+            # 2) 执行工具后，把结果再喂回模型生成最终回复
             tool_defs = self._get_web_search_tool_defs()
             if not tool_defs:
+                # 没有可用工具时，退回普通流式聊天。
                 stream = await acompletion(
                     **common_kwargs,
                     messages=messages,
@@ -263,16 +297,20 @@ class LLMService:
                 stream=False,
             )
 
+            # 先看模型是否真的发起了 tool call。
             choice = initial_response.choices[0] if initial_response.choices else None
             assistant_message = getattr(choice, "message", None) if choice else None
             tool_calls = getattr(assistant_message, "tool_calls", None) if assistant_message else None
 
             if not tool_calls:
+                # 如果模型只直接回答了内容，就直接返回，不强制走工具链。
                 content = _to_text(getattr(assistant_message, "content", None)) if assistant_message else ""
                 if content:
                     yield content
                 return
 
+            # 把 assistant 的 tool_calls 结果补回 messages，
+            # 这一步是为了符合 function calling 的对话格式。
             messages.append(
                 {
                     "role": "assistant",
@@ -294,6 +332,7 @@ class LLMService:
             for call in tool_calls:
                 tool_name = call.function.name
                 if tool_name != self.WEB_SEARCH_TOOL_NAME:
+                    # 当前版本只允许 web_search，其他工具一律拒绝。
                     messages.append(
                         {
                             "role": "tool",
@@ -305,10 +344,12 @@ class LLMService:
                     continue
 
                 try:
+                    # 工具参数是 JSON 字符串，先解析再执行。
                     arguments = json.loads(call.function.arguments or "{}")
                 except Exception:
                     arguments = {}
 
+                # 真正执行外部能力，例如联网搜索。
                 tool_result = await tools_service.execute_tool(
                     tool_name,
                     arguments,
@@ -348,7 +389,8 @@ class LLMService:
         assistant_message: str,
         base_url: Optional[str] = None,
     ) -> str:
-        """Generate a short conversation title from the first turn."""
+        # 会话标题不是单独存的人工字段，而是根据第一轮问答自动生成。
+        # 这样用户打开左侧历史时能快速知道这条对话在讲什么。
         prompt = (
             "Generate a concise chat title from the user question and assistant answer. "
             "Use the same language as the conversation. "
@@ -366,6 +408,7 @@ class LLMService:
         ]
 
         try:
+            # 用一个更轻量、更便宜的调用来生成标题，避免为了标题再走一遍长上下文聊天。
             response = await acompletion(
                 model=model,
                 api_key=api_key,
@@ -382,6 +425,7 @@ class LLMService:
         except Exception:
             pass
 
+        # 如果模型标题生成失败，就退回到用户首句问题的截断版本。
         fallback = user_message.strip().replace("\n", " ")
         if len(fallback) > 60:
             fallback = fallback[:57].rstrip() + "..."

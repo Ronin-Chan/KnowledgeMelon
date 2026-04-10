@@ -23,6 +23,8 @@ PROCESSING_TIMEOUT_MINUTES = 30
 
 
 async def _reconcile_stuck_processing_documents() -> None:
+    # 如果进程中断或任务失败，数据库里可能残留“processing”状态。
+    # 这里定期把超时太久的任务标为 failed，避免前端永远显示处理中。
     cutoff = datetime.utcnow() - timedelta(minutes=PROCESSING_TIMEOUT_MINUTES)
     async with async_session_maker() as session:
         result = await session.execute(
@@ -49,7 +51,8 @@ async def _process_document_async(
     base_url: str,
     use_local_embedding: bool,
 ):
-    # Create processing job
+    # 文档处理是一个后台异步任务：
+    # 先建 job，再更新进度，最后写入 chunk 和 embedding。
     job_id = document_processor.create_job(str(document_id))
     document_processor.start_job(job_id)
 
@@ -60,14 +63,14 @@ async def _process_document_async(
             return
 
         try:
-            # For PDFs, get page count for progress tracking
+            # PDF 额外能拿到页数，所以可以把“解析进度”做得更细。
             total_pages = 0
             if file_ext == ".pdf":
                 doc_info = await asyncio.to_thread(document_service.get_pdf_info, file_path)
                 total_pages = doc_info.get("total_pages", 0)
                 document_processor.update_progress(job_id, 0, total_pages, "开始解析 PDF...")
 
-            # Parse document (streaming for large files)
+            # 先把原始文件解析成纯文本，后续 chunk / embedding 都依赖这一步。
             text = await document_service.parse_document(file_path, file_ext)
 
             if file_ext == ".pdf" and not text.strip():
@@ -76,11 +79,13 @@ async def _process_document_async(
                 document_processor.fail_job(job_id, "PDF 未提取到可检索文本，可能是扫描版")
                 return
 
+            # 分块是为了让长文档更容易检索，也更不容易塞爆上下文窗口。
             document_processor.update_progress(job_id, total_pages // 2 if total_pages else 50, total_pages or 100, "正在分块...")
 
             chunks = document_service.chunk_text(text)
 
             if chunks:
+                # embedding 生成是最慢的阶段之一，所以这里把每个 chunk 的进度都汇报给前端。
                 document_processor.update_progress(
                     job_id,
                     total_pages * 3 // 4 if total_pages else 75,
@@ -90,6 +95,7 @@ async def _process_document_async(
 
                 embeddings = []
                 for i, chunk_text in enumerate(chunks):
+                    # 每个 chunk 都单独生成 embedding，方便后续做相似度检索。
                     embedding = await embedding_service.get_single_embedding(
                         chunk_text,
                         api_key,
@@ -98,6 +104,7 @@ async def _process_document_async(
                         use_local_embedding,
                     )
                     embeddings.append(embedding)
+                    # 把当前 chunk 的完成情况写回 job，前端就能显示“正在生成向量 x/n”。
                     current_progress = (
                         int(75 + ((i + 1) / len(chunks)) * 25)
                         if len(chunks) > 0
@@ -111,6 +118,7 @@ async def _process_document_async(
                     )
 
                 for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
+                    # chunk 和 embedding 一一对应写入数据库，后续 RAG 就从这里检索。
                     session.add(
                         DocumentChunk(
                             document_id=doc.id,
@@ -141,15 +149,15 @@ async def upload_document(
     use_local_embedding: bool = False,
     session: AsyncSession = Depends(get_session),
 ):
-    """Upload and process a document"""
-    # Validate file type
+    """上传并处理文档。"""
+    # 只允许项目明确支持的文档类型，避免解析器处理未知格式。
     file_ext = os.path.splitext(file.filename)[1].lower()
     allowed_types = [".pdf", ".docx", ".txt", ".md"]
 
     if file_ext not in allowed_types:
         raise HTTPException(400, f"Unsupported file type. Allowed: {allowed_types}")
 
-    # Only require API key if not using local embedding
+    # 如果不是本地 embedding，就必须提供外部模型的 API key。
     if not use_local_embedding and not api_key:
         raise HTTPException(
             400, f"API key required for {provider} embedding generation"
@@ -158,13 +166,13 @@ async def upload_document(
     try:
         await _reconcile_stuck_processing_documents()
 
-        # Read file content
+        # 先把原始文件读入内存，再保存到项目自己的上传目录。
         content = await file.read()
 
-        # Save document
+        # 保存原文件，后续预览 / 解析 / 下载都会用到。
         file_path, _ = await document_service.save_document(file.filename, content)
 
-        # Create document record
+        # 数据库里只存元信息和文件路径，真正的文本和向量会在后台任务里补齐。
         document = Document(
             title=file.filename,
             file_type=file_ext,
@@ -199,7 +207,8 @@ async def upload_document(
 
 @router.get("/")
 async def list_documents(session: AsyncSession = Depends(get_session)) -> List[dict]:
-    """List all documents"""
+    """列出所有文档。"""
+    # 每次拉列表前先清理一下超时的 processing 状态，避免前端卡在假处理中。
     await _reconcile_stuck_processing_documents()
 
     result = await session.execute(
@@ -226,7 +235,7 @@ async def get_document_content(
     end_page: int = PDF_PAGES_PER_REQUEST,
     session: AsyncSession = Depends(get_session),
 ):
-    """Get document content (parsed text) with pagination support for PDFs"""
+    """获取文档内容（解析后的文本），PDF 支持分页。"""
     from uuid import UUID
 
     try:
@@ -243,6 +252,7 @@ async def get_document_content(
     try:
         doc_info = {}
         if doc.file_type == ".pdf":
+            # PDF 内容要分页取，避免一次性把超大文档全塞进前端。
             doc_info = await asyncio.to_thread(
                 document_service.get_pdf_info, doc.file_path
             )
@@ -269,6 +279,7 @@ async def get_document_content(
                 }
 
             try:
+                # 这里真正读取 PDF 对应页的文本内容。
                 text = await asyncio.wait_for(
                     document_service.parse_document(
                         doc.file_path,
@@ -340,6 +351,7 @@ async def get_document_preview_info(
     }
 
     if doc.file_type == ".pdf":
+        # 预览信息先返回总页数和文件大小，前端可以先展示阅读器框架。
         doc_info = await asyncio.to_thread(document_service.get_pdf_info, doc.file_path)
         response["total_pages"] = doc_info["total_pages"]
         response["file_size_mb"] = doc_info["file_size_mb"]
@@ -380,13 +392,14 @@ async def get_document_file(
         path=doc.file_path,
         media_type=media_type,
         filename=doc.title,
+        # inline 让浏览器优先直接预览，而不是强制下载。
         content_disposition_type="inline",
     )
 
 
 @router.get("/{document_id}")
 async def get_document(document_id: str, session: AsyncSession = Depends(get_session)):
-    """Get document details"""
+    """获取文档详情。"""
     from uuid import UUID
 
     result = await session.execute(
@@ -410,7 +423,7 @@ async def get_document(document_id: str, session: AsyncSession = Depends(get_ses
 async def get_document_status(
     document_id: str, session: AsyncSession = Depends(get_session)
 ):
-    """Get document processing status with progress"""
+    """获取文档处理状态及进度。"""
     from uuid import UUID
 
     try:
@@ -424,7 +437,7 @@ async def get_document_status(
     if not doc:
         raise HTTPException(404, "Document not found")
 
-    # Get processing job if exists
+    # 如果存在处理任务就一起返回。
     job = document_processor.get_job_by_document(str(doc.id))
 
     response = {
@@ -449,7 +462,7 @@ async def get_document_status(
 async def delete_document(
     document_id: str, session: AsyncSession = Depends(get_session)
 ):
-    """Delete a document"""
+    """删除文档。"""
     from uuid import UUID
 
     result = await session.execute(
@@ -460,7 +473,7 @@ async def delete_document(
     if not doc:
         raise HTTPException(404, "Document not found")
 
-    # Delete file
+    # 删除文件。
     if os.path.exists(doc.file_path):
         os.remove(doc.file_path)
 
@@ -479,7 +492,7 @@ async def search_documents(
     limit: int = 5,
     session: AsyncSession = Depends(get_session),
 ):
-    """Search for relevant document chunks"""
+    """搜索相关的文档分块。"""
     if not api_key:
         raise HTTPException(400, "API key required")
 

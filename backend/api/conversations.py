@@ -1,5 +1,5 @@
 """
-对话管理 API - 实现无限轮对话
+对话管理 API - 实现无限轮对话。
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -46,7 +46,7 @@ async def create_conversation(
     request: ConversationCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    """创建新对话"""
+    """创建新对话。"""
     conversation = await conversation_service.create_conversation(
         session=session,
         title=request.title,
@@ -69,7 +69,7 @@ async def list_conversations(
     offset: int = 0,
     session: AsyncSession = Depends(get_session)
 ):
-    """获取对话列表"""
+    """获取对话列表。"""
     conversations = await conversation_service.list_conversations(
         session=session,
         limit=limit,
@@ -94,7 +94,7 @@ async def get_conversation(
     conversation_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    """获取对话详情及消息"""
+    """获取对话详情及消息。"""
     conversation = await conversation_service.get_conversation(session, conversation_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="对话不存在")
@@ -130,7 +130,7 @@ async def update_conversation(
     request: ConversationUpdate,
     session: AsyncSession = Depends(get_session)
 ):
-    """更新对话标题"""
+    """更新对话标题。"""
     success = await conversation_service.update_conversation_title(
         session=session,
         conversation_id=conversation_id,
@@ -146,17 +146,17 @@ async def search_conversations(
     q: str,
     session: AsyncSession = Depends(get_session)
 ):
-    """搜索对话（标题和内容）"""
+    """搜索对话（标题和内容）。"""
     if not q or len(q) < 2:
         raise HTTPException(status_code=400, detail="搜索关键词至少需要2个字符")
 
-    # 搜索对话标题
+    # 搜索对话标题。
     title_query = select(Conversation).where(
         Conversation.is_active == 1,
         Conversation.title.ilike(f"%{q}%")
     )
 
-    # 搜索消息内容，关联到对话
+    # 搜索消息内容并关联到对话。
     message_query = select(Conversation).join(
         Message, Message.conversation_id == Conversation.id
     ).where(
@@ -164,14 +164,14 @@ async def search_conversations(
         Message.content.ilike(f"%{q}%")
     ).distinct()
 
-    # 执行查询
+    # 执行查询。
     title_result = await session.execute(title_query)
     message_result = await session.execute(message_query)
 
-    # 合并结果（去重）
+    # 合并结果并去重。
     conversations = list(set(title_result.scalars().all()) | set(message_result.scalars().all()))
 
-    # 按更新时间排序
+    # 按更新时间排序。
     conversations.sort(key=lambda c: c.updated_at or c.created_at, reverse=True)
 
     return [
@@ -193,7 +193,7 @@ async def delete_conversation(
     conversation_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    """删除对话"""
+    """删除对话。"""
     success = await conversation_service.delete_conversation(session, conversation_id)
     if not success:
         raise HTTPException(status_code=404, detail="对话不存在")
@@ -206,7 +206,7 @@ async def add_message(
     request: MessageCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    """添加消息到对话"""
+    """向对话中添加消息。"""
     conversation = await conversation_service.get_conversation(session, conversation_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="对话不存在")

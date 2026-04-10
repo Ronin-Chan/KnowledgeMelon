@@ -10,10 +10,10 @@ from core.database import init_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # 启动阶段。
     await init_db()
     yield
-    # Shutdown
+    # 关闭阶段。
 
 app = FastAPI(title="Knowledge Assistant API", lifespan=lifespan)
 

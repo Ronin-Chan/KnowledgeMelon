@@ -14,13 +14,13 @@ class RAGService:
         provider: str = "openai",
         base_url: str = None
     ) -> List[DocumentChunk]:
-        """Search for similar chunks using vector similarity"""
-        # Get query embedding
+        """使用向量相似度搜索相近的文档分块。"""
+        # 获取查询向量。
         query_embedding = await embedding_service.get_single_embedding(
             query, api_key, provider, base_url
         )
 
-        # Search using cosine similarity
+        # 使用余弦相似度搜索。
         result = await session.execute(
             select(DocumentChunk)
             .order_by(DocumentChunk.embedding.cosine_distance(query_embedding))
@@ -38,7 +38,7 @@ class RAGService:
         provider: str = "openai",
         base_url: str = None
     ) -> str:
-        """Get relevant context for a query"""
+        """获取与查询相关的上下文。"""
         chunks = await self.search_similar(query, api_key, session, limit, provider, base_url)
 
         if not chunks:

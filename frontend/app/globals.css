@@ -6,7 +6,7 @@
 :root {
   --radius: 1rem;
 
-  /* Light mode - ChatGPT style */
+  /* 浅色模式 - ChatGPT 风格 */
   --background: 0 0% 100%;
   --foreground: 0 0% 9%;
   --card: 0 0% 100%;
@@ -32,7 +32,7 @@
   --chart-4: 0 0% 90%;
   --chart-5: 0 0% 96%;
 
-  /* Sidebar */
+  /* 侧边栏 */
   --sidebar-background: 0 0% 98%;
   --sidebar-foreground: 0 0% 9%;
   --sidebar-border: 0 0% 90%;
@@ -113,7 +113,7 @@
   }
 }
 
-/* Custom scrollbar - minimal */
+/* 自定义滚动条 - 极简风格 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -132,7 +132,7 @@
   background: hsl(var(--muted-foreground) / 0.4);
 }
 
-/* Selection color */
+/* 选中颜色 */
 ::selection {
   background: hsl(var(--primary) / 0.15);
 }

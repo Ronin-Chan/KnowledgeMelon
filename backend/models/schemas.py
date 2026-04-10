@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
+    role: str  # "user" 或 "assistant"
     content: str
 
 
@@ -58,10 +58,10 @@ class RAGChatRequest(BaseModel):
     baseUrl: Optional[str] = None
 
 
-# Memory schemas
+# 记忆相关 schema。
 class MemoryCreate(BaseModel):
     content: str
-    category: str = "fact"  # preference, fact, goal, important
+    category: str = "fact"  # preference、fact、goal、important
     importance: int = 5  # 1-10
 
 

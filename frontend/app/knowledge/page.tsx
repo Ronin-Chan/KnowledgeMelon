@@ -90,7 +90,7 @@ export default function KnowledgePage() {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [nextStartPage, setNextStartPage] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [pagesPerLoad] = useState<number>(20); // Load 20 pages at a time
+  const [pagesPerLoad] = useState<number>(20); // 每次加载 20 页。
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const previewRequestTokenRef = useRef<number>(0);
@@ -111,7 +111,7 @@ export default function KnowledgePage() {
     tRef.current = t;
   }, [t]);
 
-  // Use a capable embedding provider rather than the chat model blindly.
+  // 选择合适的 embedding 提供商，不要盲目沿用聊天模型。
   const provider = SUPPORTED_MODELS.find((m) => m.id === model)?.provider || "openai";
   const isPdfPreview = viewingDoc?.file_type === ".pdf";
   const isMarkdownPreview = viewingDoc?.file_type === ".md";
@@ -123,7 +123,7 @@ export default function KnowledgePage() {
     useLocalEmbedding,
   });
 
-  // Toast helper
+  // Toast 辅助函数。
   const showToast = useCallback((type: Toast["type"], message: string) => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -161,7 +161,7 @@ export default function KnowledgePage() {
       window.removeEventListener("knowledge-documents-updated", refreshDocuments);
   }, [fetchDocuments]);
 
-  // Check local Ollama status
+  // 检查本地 Ollama 状态。
   useEffect(() => {
     const checkOllama = async () => {
       try {
@@ -182,12 +182,12 @@ export default function KnowledgePage() {
       }
     };
     checkOllama();
-    // Check every 10 seconds
+    // 每 10 秒检查一次。
     const interval = setInterval(checkOllama, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch detailed processing status for documents
+  // 获取文档的详细处理状态。
   const fetchProcessingStatus = useCallback(async (docId: string) => {
     try {
       const response = await fetch(
@@ -202,7 +202,7 @@ export default function KnowledgePage() {
     }
   }, []);
 
-  // Poll for processing status with detailed progress
+  // 轮询处理状态并获取详细进度。
   useEffect(() => {
     const processingDocs = documents.filter((d) => d.status === "processing");
     if (processingDocs.length === 0) {
@@ -212,7 +212,7 @@ export default function KnowledgePage() {
       return;
     }
 
-    // Fetch detailed status for each processing document
+    // 为每个正在处理的文档获取详细状态。
     processingDocs.forEach((doc) => fetchProcessingStatus(doc.id));
 
     const interval = setInterval(() => {
@@ -234,7 +234,7 @@ export default function KnowledgePage() {
       return;
     }
 
-    // Validate file type
+    // 校验文件类型。
     const fileExt = file.name.split(".").pop()?.toLowerCase();
     const allowedTypes = ["pdf", "docx", "txt", "md"];
     if (!fileExt || !allowedTypes.includes(fileExt)) {
@@ -298,7 +298,7 @@ export default function KnowledgePage() {
     } finally {
       setIsUploading(false);
       setUploadProgress("");
-      // Reset file input
+      // 重置文件输入框。
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -315,7 +315,7 @@ export default function KnowledgePage() {
     }
   };
 
-  // Drag and drop handlers
+  // 拖拽处理函数。
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -671,7 +671,7 @@ export default function KnowledgePage() {
 
   return (
     <AppShell>
-      {/* Toast Notifications */}
+      {/* Toast 通知 */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
@@ -692,7 +692,7 @@ export default function KnowledgePage() {
         ))}
       </div>
 
-      {/* Sidebar */}
+      {/* 侧边栏 */}
       <aside className="hidden">
         <div className="p-4">
           <Link
@@ -720,10 +720,10 @@ export default function KnowledgePage() {
         </nav>
       </aside>
 
-      {/* Main Content */}
+      {/* 主内容 */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-8 py-12">
-          {/* Header */}
+          {/* 标题栏 */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("knowledgeTitle")}</h1>
@@ -760,7 +760,7 @@ export default function KnowledgePage() {
             </div>
           </div>
 
-          {/* Local Embedding Toggle */}
+          {/* 本地 Embedding 开关 */}
           <div className="flex items-center justify-between p-4 mb-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
             <div className="flex items-center gap-3">
               <div
@@ -839,7 +839,7 @@ export default function KnowledgePage() {
             </div>
           )}
 
-          {/* Drag & Drop Zone */}
+          {/* 拖拽上传区域 */}
           <div
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -878,7 +878,7 @@ export default function KnowledgePage() {
             )}
           </div>
 
-          {/* Documents List */}
+          {/* 文档列表 */}
           <div className="border border-border rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-12 text-center">
@@ -921,7 +921,7 @@ export default function KnowledgePage() {
                                 {getStatusText(doc.status)}
                               </span>
                             </div>
-                            {/* Processing Progress Bar */}
+                            {/* 处理进度条 */}
                             {doc.status === "processing" &&
                               processingStatus[doc.id]?.progress && (
                                 <div className="mt-2">
@@ -1001,12 +1001,12 @@ export default function KnowledgePage() {
         </div>
       </main>
 
-      {/* Document View Modal */}
+      {/* 文档查看弹窗 */}
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
           {viewingDoc && (
             <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-            {/* Modal Header */}
+            {/* 弹窗头部 */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground" />
@@ -1026,7 +1026,7 @@ export default function KnowledgePage() {
               </button>
             </div>
 
-            {/* File Info Bar - For large PDFs */}
+            {/* 文件信息栏 - 适用于大型 PDF */}
             {docInfo.total_pages && (
               <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -1050,7 +1050,7 @@ export default function KnowledgePage() {
               </div>
             )}
 
-            {/* Modal Content */}
+            {/* 弹窗内容 */}
             <div
               ref={contentContainerRef}
               className="flex-1 overflow-y-auto p-6"
@@ -1151,7 +1151,7 @@ export default function KnowledgePage() {
                   <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
                     {docContent}
                   </pre>
-                  {/* Load More Indicator */}
+                  {/* 加载更多提示 */}
                   {docInfo.total_pages && currentPage < docInfo.total_pages && (
                     <div className="flex flex-col items-center justify-center py-6 gap-2">
                       {isLoadingMore ? (
@@ -1175,9 +1175,9 @@ export default function KnowledgePage() {
               )}
             </div>
 
-            {/* Modal Footer */}
+            {/* 弹窗底部 */}
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
-              {/* Page Navigation for PDFs */}
+              {/* PDF 页码导航 */}
               {docInfo.total_pages &&
                 docInfo.total_pages > 1 &&
                 !isPdfPreview && (

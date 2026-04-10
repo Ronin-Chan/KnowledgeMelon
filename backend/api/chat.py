@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import traceback
 import os
 import tempfile
+import asyncio
+import uuid
 
 from models.schemas import ChatRequest, RAGChatRequest
 from services.llm_service import llm_service
@@ -12,8 +14,6 @@ from services.memory_service import memory_service
 from services.document_service import document_service
 from services.tools_service import tools_service
 from core.database import get_session, async_session_maker
-import uuid
-import asyncio
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -22,44 +22,53 @@ async def _extract_memories_background(
     conversation_id: str,
     api_key: str,
     provider: str = "openai",
-    base_url: str = None
+    base_url: str = None,
 ):
-    """Background task to extract memories from conversation"""
+    """从最近一段对话中提取长期记忆。"""
     try:
         async with async_session_maker() as session:
-            # Get recent conversation messages
+            # 只取最近一小段对话，让记忆提取器聚焦稳定事实。
             messages = await conversation_service.get_recent_messages(
                 session=session,
                 conversation_id=conversation_id,
-                limit=10  # Last 10 messages
+                limit=10,
             )
 
-            if len(messages) < 2:  # Need at least user + assistant
+            # 记忆提取至少需要一轮用户和助手消息。
+            if len(messages) < 2:
                 return
 
-            # Format conversation text
-            conversation_text = "\n".join([
-                f"{'User' if m.role == 'user' else 'Assistant'}: {m.content}"
-                for m in messages
-            ])
+            # 把对话整理成纯文本，供提取模型使用。
+            conversation_text = "\n".join(
+                [
+                    f"{'User' if m.role == 'user' else 'Assistant'}: {m.content}"
+                    for m in messages
+                ]
+            )
 
-            # Extract memories
+            # 交给记忆服务，将这段聊天内容转成结构化记忆。
             extracted = await memory_service.extract_memories_from_conversation(
                 conversation_text=conversation_text,
                 api_key=api_key,
                 session=session,
                 provider=provider,
-                base_url=base_url
+                base_url=base_url,
             )
 
             if extracted:
-                print(f"[Auto Memory] Extracted {len(extracted)} memories from conversation {conversation_id}")
+                print(
+                    f"[Auto Memory] Extracted {len(extracted)} memories from conversation {conversation_id}"
+                )
 
     except Exception as e:
         print(f"[Auto Memory Error] {type(e).__name__}: {e}")
 
 
 async def _parse_temporary_attachment(file: UploadFile) -> dict:
+    """仅将文件解析为临时会话上下文。
+
+    这条路径不会写入知识库，只负责提取文本，方便当前对话立即引用文件内容。
+    """
     file_ext = os.path.splitext(file.filename or "")[1].lower()
     allowed_types = [".pdf", ".docx", ".txt", ".md"]
     if file_ext not in allowed_types:
@@ -75,6 +84,7 @@ async def _parse_temporary_attachment(file: UploadFile) -> dict:
             temp_file.write(content)
             temp_path = temp_file.name
 
+        # 复用文档解析器，让聊天附件和知识库上传使用同一套文件解析逻辑。
         parsed_text = await document_service.parse_document(temp_path, file_ext)
         parsed_text = (parsed_text or "").strip()
         return {
@@ -91,30 +101,33 @@ async def _parse_temporary_attachment(file: UploadFile) -> dict:
 @router.post("/chat")
 async def chat(
     request: ChatRequest,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
 ):
-    """Basic chat with conversation persistence"""
-    # 如果指定了 conversation_id，使用持久化对话的上下文
+    """带会话持久化的基础聊天接口。"""
+    # 先拉取压缩后的上下文，避免每次都发送完整历史。
     optimized_context = []
     if request.conversationId:
         optimized_context = await conversation_service.get_optimized_context(
             session=session,
             conversation_id=request.conversationId,
-            current_model=request.model
+            current_model=request.model,
         )
-        # 保存用户消息
+
+        # 在调用模型前先保存用户消息。
+        # 这样即使流式响应失败，历史里也还保留这次提示词。
         await conversation_service.add_message(
             session=session,
             conversation_id=request.conversationId,
             role="user",
             content=request.message,
-            model=request.model
+            model=request.model,
         )
 
     async def generate():
         assistant_content = ""
         try:
-            # 使用优化的上下文（包含摘要+最近消息）
+            # 普通聊天走标准的 prompt 组装路径：
+            # 历史消息 + 临时附件 + 可选的联网搜索工具。
             async for chunk in llm_service.stream_chat(
                 message=request.message,
                 api_key=request.apiKey,
@@ -125,21 +138,22 @@ async def chat(
                 attachments=request.attachments,
                 base_url=request.baseUrl,
                 session=session,
-                history=optimized_context
+                history=optimized_context,
             ):
                 assistant_content += chunk
                 yield chunk
 
-            # 保存助手回复
             if request.conversationId:
+                # 只有在流式输出完整结束后，才保存助手回复。
                 await conversation_service.add_message(
                     session=session,
                     conversation_id=request.conversationId,
                     role="assistant",
                     content=assistant_content,
-                    model=request.model
+                    model=request.model,
                 )
 
+                # 如果对话还在用默认占位标题，就根据首轮问答生成一个简短标题。
                 await conversation_service.generate_conversation_title(
                     session=session,
                     conversation_id=request.conversationId,
@@ -148,19 +162,17 @@ async def chat(
                     base_url=request.baseUrl,
                 )
 
-                # 检查是否需要生成摘要
+                # 长对话会异步生成摘要，保持 prompt 尽量精简。
                 should_summary = await conversation_service.should_generate_summary(
                     session=session,
-                    conversation_id=request.conversationId
+                    conversation_id=request.conversationId,
                 )
                 if should_summary:
-                    # 异步生成摘要（不阻塞响应）
-                    import asyncio
                     asyncio.create_task(
                         conversation_service.generate_summary(
                             session=session,
                             conversation_id=request.conversationId,
-                            api_key=request.apiKey
+                            api_key=request.apiKey,
                         )
                     )
 
@@ -175,29 +187,34 @@ async def chat(
 @router.post("/chat/rag")
 async def chat_with_rag(
     request: RAGChatRequest,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
 ):
-    """Chat with RAG, memory and conversation persistence"""
-    # 获取优化的上下文
+    """增强版聊天接口，支持 RAG、记忆、附件和可选工具。"""
     optimized_context = []
     if request.conversationId:
         optimized_context = await conversation_service.get_optimized_context(
             session=session,
             conversation_id=request.conversationId,
-            current_model=request.model
+            current_model=request.model,
         )
-        # 保存用户消息
+
+        # 先保存用户消息，方便后续步骤读取同一轮内容。
         await conversation_service.add_message(
             session=session,
             conversation_id=request.conversationId,
             role="user",
             content=request.message,
-            model=request.model
+            model=request.model,
         )
 
     async def generate():
         assistant_content = ""
         try:
+            # 这里是关键编排点：
+            # - use_rag：从知识库检索相关片段
+            # - use_memory：检索和问题相关的长期记忆
+            # - use_tools：让模型在需要时调用 web_search
+            # - attachments：注入当前会话的文件上下文
             async for chunk in llm_service.stream_chat(
                 message=request.message,
                 api_key=request.apiKey,
@@ -208,19 +225,19 @@ async def chat_with_rag(
                 attachments=request.attachments,
                 base_url=request.baseUrl,
                 session=session,
-                history=optimized_context
+                history=optimized_context,
             ):
                 assistant_content += chunk
                 yield chunk
 
-            # 保存助手回复
             if request.conversationId:
+                # 只有流式输出结束后，才保存助手内容。
                 await conversation_service.add_message(
                     session=session,
                     conversation_id=request.conversationId,
                     role="assistant",
                     content=assistant_content,
-                    model=request.model
+                    model=request.model,
                 )
 
                 await conversation_service.generate_conversation_title(
@@ -231,28 +248,30 @@ async def chat_with_rag(
                     base_url=request.baseUrl,
                 )
 
-                # 检查是否需要生成摘要
+                # 摘要生成保持异步，避免阻塞用户响应。
                 should_summary = await conversation_service.should_generate_summary(
                     session=session,
-                    conversation_id=request.conversationId
+                    conversation_id=request.conversationId,
                 )
                 if should_summary:
                     asyncio.create_task(
                         conversation_service.generate_summary(
                             session=session,
                             conversation_id=request.conversationId,
-                            api_key=request.apiKey
+                            api_key=request.apiKey,
                         )
                     )
 
-                # 自动提取记忆（当开启记忆功能时）
+                # 当启用记忆时，从聊天内容中异步抽取新的长期记忆。
                 if request.use_memory:
                     asyncio.create_task(
                         _extract_memories_background(
                             conversation_id=request.conversationId,
                             api_key=request.apiKey,
-                            provider=llm_service.infer_provider(request.model, request.baseUrl),
-                            base_url=request.baseUrl
+                            provider=llm_service.infer_provider(
+                                request.model, request.baseUrl
+                            ),
+                            base_url=request.baseUrl,
                         )
                     )
 
@@ -268,19 +287,19 @@ async def chat_with_rag(
 async def preview_attachment(
     file: UploadFile = File(...),
 ):
-    """Parse an uploaded file for temporary chat-context use."""
+    """解析上传文件，仅供临时聊天上下文使用。"""
     return await _parse_temporary_attachment(file)
 
 
 @router.get("/tools")
 async def list_tools():
-    """List available tools for agent"""
+    """暴露当前可用的工具，便于调试或界面查看。"""
     return {
         "tools": [
             {
                 "name": tool.name,
                 "description": tool.description,
-                "parameters": tool.parameters
+                "parameters": tool.parameters,
             }
             for tool in tools_service.tools.values()
         ]

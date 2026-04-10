@@ -1,5 +1,5 @@
 """
-Background document processor with progress tracking
+带进度跟踪的后台文档处理器。
 """
 import asyncio
 import threading
@@ -13,7 +13,7 @@ import uuid
 class ProcessingJob:
     id: str
     document_id: str
-    status: str = "pending"  # pending, processing, completed, failed
+    status: str = "pending"  # pending、processing、completed、failed
     progress: int = 0  # 0-100
     current_page: int = 0
     total_pages: int = 0
@@ -24,7 +24,7 @@ class ProcessingJob:
 
 
 class DocumentProcessor:
-    """Background document processor with progress tracking"""
+    """带进度跟踪的后台文档处理器。"""
 
     def __init__(self):
         self.jobs: Dict[str, ProcessingJob] = {}
@@ -32,7 +32,7 @@ class DocumentProcessor:
         self._callbacks: Dict[str, list] = {}
 
     def create_job(self, document_id: str) -> str:
-        """Create a new processing job"""
+        """创建一个新的处理任务。"""
         job_id = str(uuid.uuid4())
         job = ProcessingJob(
             id=job_id,
@@ -46,18 +46,18 @@ class DocumentProcessor:
         return job_id
 
     def get_job(self, job_id: str) -> Optional[ProcessingJob]:
-        """Get job by ID"""
+        """按 ID 获取任务。"""
         return self.jobs.get(job_id)
 
     def get_job_by_document(self, document_id: str) -> Optional[ProcessingJob]:
-        """Get latest job for a document"""
+        """获取某个文档的最新任务。"""
         for job in reversed(list(self.jobs.values())):
             if job.document_id == document_id:
                 return job
         return None
 
     def update_progress(self, job_id: str, current: int, total: int, message: str = ""):
-        """Update job progress"""
+        """更新任务进度。"""
         if job_id not in self.jobs:
             return
 
@@ -68,11 +68,11 @@ class DocumentProcessor:
         job.message = message or f"已处理 {current}/{total} 页"
         job.updated_at = datetime.utcnow()
 
-        # Trigger callbacks
+        # 触发回调。
         self._trigger_callbacks(job_id, job)
 
     def complete_job(self, job_id: str, chunks_count: int = 0):
-        """Mark job as completed"""
+        """标记任务已完成。"""
         if job_id not in self.jobs:
             return
 
@@ -84,7 +84,7 @@ class DocumentProcessor:
         self._trigger_callbacks(job_id, job)
 
     def fail_job(self, job_id: str, error: str):
-        """Mark job as failed"""
+        """标记任务失败。"""
         if job_id not in self.jobs:
             return
 
@@ -96,7 +96,7 @@ class DocumentProcessor:
         self._trigger_callbacks(job_id, job)
 
     def start_job(self, job_id: str):
-        """Mark job as started"""
+        """标记任务已开始。"""
         if job_id not in self.jobs:
             return
 
@@ -107,13 +107,13 @@ class DocumentProcessor:
         self._trigger_callbacks(job_id, job)
 
     def on_progress(self, job_id: str, callback: Callable):
-        """Register progress callback"""
+        """注册进度回调。"""
         with self._lock:
             if job_id in self._callbacks:
                 self._callbacks[job_id].append(callback)
 
     def _trigger_callbacks(self, job_id: str, job: ProcessingJob):
-        """Trigger all callbacks for a job"""
+        """触发某个任务的所有回调。"""
         callbacks = self._callbacks.get(job_id, [])
         for callback in callbacks:
             try:
@@ -122,7 +122,7 @@ class DocumentProcessor:
                 pass
 
     def cleanup_old_jobs(self, max_age_hours: int = 24):
-        """Remove old completed/failed jobs"""
+        """清理过期的已完成或失败任务。"""
         cutoff = datetime.utcnow() - __import__('datetime').timedelta(hours=max_age_hours)
         with self._lock:
             to_remove = [
@@ -134,5 +134,5 @@ class DocumentProcessor:
                 del self._callbacks[job_id]
 
 
-# Global processor instance
+# 全局处理器实例。
 document_processor = DocumentProcessor()

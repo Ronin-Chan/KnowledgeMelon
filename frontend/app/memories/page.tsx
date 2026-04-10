@@ -112,14 +112,14 @@ export default function MemoriesPage() {
     important: t("memoriesCategoryImportant"),
   };
 
-  // Get current model's provider and API key
+  // 获取当前模型的提供商和 API key。
   const currentModel = SUPPORTED_MODELS.find((m) => m.id === model);
   const provider = currentModel?.provider || "openai";
   const apiKey =
     apiKeys[provider] || (provider === "openai" ? openaiApiKey : "") || "";
   const baseUrl = baseUrls[provider] || "";
 
-  // Toast helper
+  // Toast 辅助函数。
   const showToast = useCallback((type: Toast["type"], message: string) => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -346,7 +346,7 @@ export default function MemoriesPage() {
 
   return (
     <AppShell>
-      {/* Toast Notifications */}
+      {/* Toast 通知 */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
@@ -367,7 +367,7 @@ export default function MemoriesPage() {
         ))}
       </div>
 
-      {/* Sidebar */}
+      {/* 侧边栏 */}
       <aside className="hidden">
         <div className="p-4">
           <Link
@@ -408,10 +408,10 @@ export default function MemoriesPage() {
         </nav>
       </aside>
 
-      {/* Main Content */}
+      {/* 主内容 */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-8 py-12">
-          {/* Header */}
+          {/* 标题栏 */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("memoriesTitle")}</h1>
@@ -430,7 +430,7 @@ export default function MemoriesPage() {
               </div>
           </div>
 
-          {/* Settings Summary */}
+          {/* 设置摘要 */}
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="p-4 rounded-lg border border-border bg-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -461,7 +461,7 @@ export default function MemoriesPage() {
             </div>
           </div>
 
-          {/* Search */}
+          {/* 搜索 */}
           <div className="flex gap-2 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -478,7 +478,7 @@ export default function MemoriesPage() {
             </Button>
           </div>
 
-          {/* Add Memory Form */}
+          {/* 添加记忆表单 */}
           {showAddForm && (
             <div className="border border-border rounded-xl p-6 mb-6">
               <h3 className="font-medium mb-4">{t("memoriesAddNewTitle")}</h3>
@@ -536,7 +536,7 @@ export default function MemoriesPage() {
             </div>
           )}
 
-          {/* Memories List */}
+          {/* 记忆列表 */}
           <div className="border border-border rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-12 text-center">
@@ -606,7 +606,7 @@ export default function MemoriesPage() {
         </div>
       </main>
 
-      {/* Settings Modal */}
+      {/* 设置弹窗 */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -618,7 +618,7 @@ export default function MemoriesPage() {
           </DialogHeader>
 
           <div className="space-y-6 py-2">
-              {/* Auto Extract Toggle */}
+              {/* 自动提取开关 */}
               <div className="flex items-center justify-between p-4 rounded-lg border border-border">
                 <div>
                   <p className="font-medium">{t("memoriesAutoExtract")}</p>
@@ -647,7 +647,7 @@ export default function MemoriesPage() {
                 </button>
               </div>
 
-              {/* Min Importance */}
+              {/* 最低重要性 */}
               <div className="space-y-3">
                 <label className="font-medium">{t("memoriesMinImportance")}</label>
                 <p className="text-sm text-muted-foreground">
@@ -673,7 +673,7 @@ export default function MemoriesPage() {
                 </div>
               </div>
 
-              {/* Whitelist */}
+              {/* 白名单 */}
               <div className="space-y-3">
                 <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
@@ -712,7 +712,7 @@ export default function MemoriesPage() {
                 </div>
               </div>
 
-              {/* Blacklist */}
+              {/* 黑名单 */}
               <div className="space-y-3">
                 <label className="font-medium">{t("memoriesBlacklistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
@@ -752,7 +752,7 @@ export default function MemoriesPage() {
               </div>
             </div>
 
-            {/* Modal Footer */}
+            {/* 弹窗底部 */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
               <Button variant="outline" onClick={() => setShowSettings(false)}>
                 {t("memoriesCancel")}

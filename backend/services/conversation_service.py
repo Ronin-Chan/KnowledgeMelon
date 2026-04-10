@@ -1,6 +1,7 @@
 """
-对话服务 - 实现无限轮对话的高级方案
-包含：持久化存储、智能摘要、动态 Token 裁剪
+用于持久化、摘要生成和按 token 裁剪上下文的对话服务。
+
+这个文件是项目里最重要的 AI 相关服务之一，因为它决定了多少历史会进入下一次模型调用。
 """
 
 from typing import List, Optional, Dict, Any
@@ -13,43 +14,44 @@ import tiktoken
 from models.database import Conversation, Message
 from services.llm_service import llm_service
 
-# Token 限制配置
-MAX_CONTEXT_TOKENS = 120000  # 留给上下文的最大 token 数（预留空间给响应）
-MAX_MESSAGES_BEFORE_SUMMARY = 20  # 超过此消息数开始摘要
-SUMMARY_TRIGGER_THRESHOLD = 100000  # 触发摘要的 token 阈值
+# 上下文预算配置。
+# 目标是在给模型回复保留足够空间的同时，尽量保留最重要的对话历史。
+MAX_CONTEXT_TOKENS = 120000
+MAX_MESSAGES_BEFORE_SUMMARY = 20
+SUMMARY_TRIGGER_THRESHOLD = 100000
 
 
 def count_tokens(text: str, model: str = "gpt-4.1-mini") -> int:
-    """计算文本的 token 数量"""
+    """估算一段文本的 token 数。"""
     try:
-        # 使用 tiktoken 计算 token
+        # 优先使用真实 tokenizer，这样摘要触发条件更接近实际。
         encoding = tiktoken.encoding_for_model(model)
         return len(encoding.encode(text))
-    except:
-        # 回退：粗略估算 (1 token ≈ 4 字符)
+    except Exception:
+        # 如果模型 tokenizer 不可用，就使用回退估算。
         return len(text) // 4
 
 
 def count_messages_tokens(messages: List[Dict[str, str]], model: str = "gpt-4.1-mini") -> int:
-    """计算消息列表的总 token 数"""
+    """估算一组聊天消息的 token 数。"""
     total = 0
     for msg in messages:
         total += count_tokens(msg.get("content", ""), model)
-        # 每条消息的额外开销
+        # 聊天消息的结构本身也会消耗 token，所以加一点额外开销。
         total += 4
     return total
 
 
 class ConversationService:
-    """对话服务类"""
+    """对话持久化与历史管理。"""
 
     async def create_conversation(
         self,
         session: AsyncSession,
         title: Optional[str] = None,
-        model: str = "gpt-4.1-mini"
+        model: str = "gpt-4.1-mini",
     ) -> Conversation:
-        """创建新对话"""
+        """创建一条新的激活状态对话记录。"""
         conversation = Conversation(
             id=uuid.uuid4(),
             title=title or "新对话",
@@ -58,7 +60,7 @@ class ConversationService:
             updated_at=datetime.utcnow(),
             message_count=0,
             total_tokens=0,
-            is_active=1
+            is_active=1,
         )
         session.add(conversation)
         await session.commit()
@@ -68,13 +70,13 @@ class ConversationService:
     async def get_conversation(
         self,
         session: AsyncSession,
-        conversation_id: str
+        conversation_id: str,
     ) -> Optional[Conversation]:
-        """获取对话"""
+        """按 id 获取一条激活中的对话。"""
         result = await session.execute(
             select(Conversation).where(
                 Conversation.id == conversation_id,
-                Conversation.is_active == 1
+                Conversation.is_active == 1,
             )
         )
         return result.scalar_one_or_none()
@@ -83,9 +85,9 @@ class ConversationService:
         self,
         session: AsyncSession,
         conversation_id: str,
-        limit: int = 1000
+        limit: int = 1000,
     ) -> List[Message]:
-        """获取对话的消息列表"""
+        """获取某个对话完整且有序的消息列表。"""
         result = await session.execute(
             select(Message)
             .where(Message.conversation_id == conversation_id)
@@ -98,17 +100,17 @@ class ConversationService:
         self,
         session: AsyncSession,
         conversation_id: str,
-        limit: int = 10
+        limit: int = 10,
     ) -> List[Message]:
-        """获取最近的消息（用于记忆提取）"""
+        """获取最近消息，供记忆提取或快速查看使用。"""
         result = await session.execute(
             select(Message)
             .where(Message.conversation_id == conversation_id)
             .order_by(Message.created_at.desc())
             .limit(limit)
         )
-        # 返回正序排列的消息
         messages = result.scalars().all()
+        # 再反转回时间正序。
         return list(reversed(messages))
 
     async def add_message(
@@ -117,24 +119,25 @@ class ConversationService:
         conversation_id: str,
         role: str,
         content: str,
-        model: str = "gpt-4.1-mini"
+        model: str = "gpt-4.1-mini",
     ) -> Message:
-        """添加消息到对话"""
-        # 计算 token
+        """保存一条聊天消息并更新对话统计信息。"""
         tokens = count_tokens(content, model)
 
         message = Message(
             id=uuid.uuid4(),
-            conversation_id=uuid.UUID(conversation_id) if isinstance(conversation_id, str) else conversation_id,
+            conversation_id=uuid.UUID(conversation_id)
+            if isinstance(conversation_id, str)
+            else conversation_id,
             role=role,
             content=content,
             tokens=tokens,
             is_summarized=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
         session.add(message)
 
-        # 更新对话统计
+        # 在对话记录上维护滚动统计，这样后续触发摘要时就不用重新计算全部 token。
         conversation = await self.get_conversation(session, str(conversation_id))
         if conversation:
             conversation.message_count += 1
@@ -149,24 +152,21 @@ class ConversationService:
         self,
         session: AsyncSession,
         conversation_id: str,
-        api_key: str
+        api_key: str,
     ) -> str:
-        """
-        生成对话摘要 - 将早期对话压缩为摘要
-        """
-        # 获取早期的消息（前50%）
+        """对长对话的前半段生成摘要。"""
         messages = await self.get_conversation_messages(session, conversation_id)
         if len(messages) < 10:
-            return ""  # 消息太少不需要摘要
+            # 短对话不需要压缩。
+            return ""
 
-        # 取前半部分进行摘要
-        messages_to_summarize = messages[:len(messages)//2]
+        # 大致摘要前半段，并保留后半段作为原始上下文。
+        messages_to_summarize = messages[: len(messages) // 2]
 
-        # 构建摘要提示
-        conversation_text = "\n".join([
-            f"{msg.role}: {msg.content[:500]}"  # 限制每条消息长度
-            for msg in messages_to_summarize
-        ])
+        # 将消息整理成紧凑的纯文本转录，供摘要模型使用。
+        conversation_text = "\n".join(
+            [f"{msg.role}: {msg.content[:500]}" for msg in messages_to_summarize]
+        )
 
         summary_prompt = f"""请对以下对话进行摘要，保留关键信息和上下文：
 
@@ -179,26 +179,25 @@ class ConversationService:
 
 摘要："""
 
-        # 调用 LLM 生成摘要
+        # 用轻量模型做摘要，降低成本。
         summary_chunks = []
         async for chunk in llm_service.stream_chat(
             message=summary_prompt,
             api_key=api_key,
-            model="gpt-4.1-mini",  # 使用轻量模型生成摘要
+            model="gpt-4.1-mini",
             use_rag=False,
-            use_memory=False
+            use_memory=False,
         ):
             summary_chunks.append(chunk)
 
         summary = "".join(summary_chunks)
 
-        # 更新对话摘要
         conversation = await self.get_conversation(session, conversation_id)
         if conversation:
             conversation.summary = summary
             conversation.summary_tokens = count_tokens(summary)
 
-            # 标记已摘要的消息
+            # 把已摘要的消息标记出来，方便后续裁剪上下文时跳过。
             for msg in messages_to_summarize:
                 msg.is_summarized = 1
 
@@ -211,14 +210,15 @@ class ConversationService:
         session: AsyncSession,
         conversation_id: str,
         current_model: str = "gpt-4.1-mini",
-        max_tokens: int = MAX_CONTEXT_TOKENS
+        max_tokens: int = MAX_CONTEXT_TOKENS,
     ) -> List[Dict[str, str]]:
         """
-        获取优化的上下文 - 智能选择消息和摘要
-        策略：
-        1. 优先保留最近的消息
-        2. 早期消息用摘要替代
-        3. 如果仍超限制，裁剪中间部分
+        构建一个感知 token 的上下文窗口。
+
+        优先级：
+        1. 现有摘要
+        2. 最近的未摘要消息
+        3. 到达 token 预算后停止
         """
         conversation = await self.get_conversation(session, conversation_id)
         if not conversation:
@@ -231,53 +231,49 @@ class ConversationService:
         result = []
         total_tokens = 0
 
-        # 策略1：如果有摘要，先添加为系统消息
+        # 如果存在摘要，就作为 system 消息放到最前面。
         if conversation.summary:
             summary_msg = {
                 "role": "system",
-                "content": f"[对话历史摘要] {conversation.summary}"
+                "content": f"[对话历史摘要] {conversation.summary}",
             }
             summary_tokens = count_tokens(summary_msg["content"], current_model)
             if total_tokens + summary_tokens < max_tokens:
                 result.append(summary_msg)
                 total_tokens += summary_tokens
 
-        # 策略2：添加最近的消息（倒序添加，直到 token 限制）
+        # 从最新到最旧添加消息，直到耗尽预算。
         recent_messages = []
         for msg in reversed(messages):
             if msg.is_summarized:
-                continue  # 跳过已摘要的消息
+                continue
 
             msg_dict = {"role": msg.role, "content": msg.content}
             msg_tokens = count_tokens(msg.content, current_model) + 4
 
             if total_tokens + msg_tokens > max_tokens:
-                break  # 超出限制，停止添加
+                break
 
-            recent_messages.insert(0, msg_dict)  # 插入到开头保持顺序
+            recent_messages.insert(0, msg_dict)
             total_tokens += msg_tokens
 
         result.extend(recent_messages)
-
         return result
 
     async def should_generate_summary(
         self,
         session: AsyncSession,
-        conversation_id: str
+        conversation_id: str,
     ) -> bool:
-        """判断是否需要生成摘要"""
+        """判断对话是否已经足够长，需要生成摘要。"""
         conversation = await self.get_conversation(session, conversation_id)
         if not conversation:
             return False
 
-        # 条件1：消息数超过阈值
         if conversation.message_count >= MAX_MESSAGES_BEFORE_SUMMARY:
-            # 检查是否已有摘要，或距离上次摘要已有一段时间
             if not conversation.summary:
                 return True
 
-        # 条件2：token 数超过阈值
         if conversation.total_tokens >= SUMMARY_TRIGGER_THRESHOLD:
             return True
 
@@ -287,9 +283,9 @@ class ConversationService:
         self,
         session: AsyncSession,
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[Conversation]:
-        """列出用户的对话历史"""
+        """列出用于侧边栏展示的激活对话。"""
         result = await session.execute(
             select(Conversation)
             .where(Conversation.is_active == 1)
@@ -302,9 +298,9 @@ class ConversationService:
     async def delete_conversation(
         self,
         session: AsyncSession,
-        conversation_id: str
+        conversation_id: str,
     ) -> bool:
-        """软删除对话"""
+        """软删除一条对话。"""
         conversation = await self.get_conversation(session, conversation_id)
         if conversation:
             conversation.is_active = 0
@@ -316,9 +312,9 @@ class ConversationService:
         self,
         session: AsyncSession,
         conversation_id: str,
-        title: str
+        title: str,
     ) -> bool:
-        """更新对话标题"""
+        """更新对话标题。"""
         conversation = await self.get_conversation(session, conversation_id)
         if conversation:
             conversation.title = title
@@ -334,18 +330,18 @@ class ConversationService:
         model: str,
         base_url: str = None,
     ) -> Optional[str]:
-        """Generate and persist a title for the first exchange."""
+        """根据首轮用户/助手消息生成并保存标题。"""
         conversation = await self.get_conversation(session, conversation_id)
         if not conversation:
             return None
 
+        # 只对仍然使用默认占位标题的对话自动生成标题。
         default_titles = {"新对话", "New conversation", "New chat", "", None}
         if conversation.title not in default_titles:
             return conversation.title
 
-        messages = await self.get_conversation_messages(
-            session, conversation_id, limit=2
-        )
+        # 标题只需要首轮问答，不需要整段对话。
+        messages = await self.get_conversation_messages(session, conversation_id, limit=2)
         user_message = next((m.content for m in messages if m.role == "user"), "").strip()
         assistant_message = next((m.content for m in messages if m.role == "assistant"), "").strip()
 
@@ -360,15 +356,12 @@ class ConversationService:
             base_url=base_url,
         )
 
-        title = title.strip().strip('"').strip("'")
-        if not title:
-            return conversation.title
+        if title:
+            conversation.title = title
+            await session.commit()
+            return title
 
-        conversation.title = title[:80]
-        conversation.updated_at = datetime.utcnow()
-        await session.commit()
         return conversation.title
 
 
-# 全局服务实例
 conversation_service = ConversationService()

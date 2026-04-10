@@ -195,7 +195,7 @@ export default function ChatPage() {
         }
     };
 
-    // Search conversations
+    // 搜索对话。
     const handleSearchConversations = async () => {
         if (!searchQuery.trim()) {
             setFilteredConversations(conversations);
@@ -215,7 +215,7 @@ export default function ChatPage() {
             }
         } catch (error) {
             console.error("Failed to search conversations:", error);
-            // Fallback to client-side filtering
+            // 退回到客户端过滤。
             const filtered = conversations.filter((c) =>
                 c.title.toLowerCase().includes(searchQuery.toLowerCase()),
             );
@@ -225,7 +225,7 @@ export default function ChatPage() {
         }
     };
 
-    // Clear search
+    // 清空搜索。
     const clearSearch = () => {
         setSearchQuery("");
         setFilteredConversations(conversations);
@@ -281,7 +281,7 @@ export default function ChatPage() {
                     })),
                 );
                 clearCurrentSessionAttachments();
-                // 设置当前模型
+                // 设置当前模型。
                 const convModel = SUPPORTED_MODELS.find((m) => m.id === data.model);
                 if (convModel) {
                     setModel(data.model);
@@ -323,7 +323,7 @@ export default function ChatPage() {
         setPendingDeleteConversation(null);
     };
 
-    // 格式化日期
+    // 格式化日期。
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         const now = new Date();
@@ -343,7 +343,7 @@ export default function ChatPage() {
         scrollToBottom();
     }, [messages]);
 
-    // Auto-resize textarea
+    // 自动调整 textarea 高度。
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
@@ -926,7 +926,7 @@ export default function ChatPage() {
     };
 
     const handleRegenerate = async () => {
-        // Find last user message
+        // 查找最后一条用户消息。
         const lastUserIndex = [...messages]
             .reverse()
             .findIndex((m) => m.role === "user");
@@ -934,15 +934,15 @@ export default function ChatPage() {
 
         const lastUserMsg = messages[messages.length - 1 - lastUserIndex];
 
-        // Remove the last assistant message if exists
+        // 如果存在，移除最后一条助手消息。
         const lastMsg = messages[messages.length - 1];
         if (lastMsg?.role === "assistant") {
             setMessages((prev) => prev.slice(0, -1));
         }
 
-        // Trigger a new send with the last user message
+        // 重新使用最后一条用户消息发送。
         setInput(lastUserMsg.content);
-        // Use setTimeout to ensure the input state is updated before sending
+        // 用 setTimeout 确保发送前输入状态已更新。
         setTimeout(() => {
             const sendButton = document.querySelector(
                 '[data-send-button="true"]',
@@ -953,12 +953,12 @@ export default function ChatPage() {
 
     return (
         <div className="flex h-screen bg-background">
-            {/* Sidebar */}
+                {/* 侧边栏 */}
             <aside
                 className={`${sidebarOpen ? "w-72" : "w-0"
                     } bg-[#f9f9f9] dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 transition-all duration-300 overflow-hidden flex flex-col`}
             >
-                {/* New Chat Button */}
+                {/* 新建对话按钮 */}
                 <div className="p-4">
                     <button
                         onClick={createNewConversation}
@@ -969,9 +969,9 @@ export default function ChatPage() {
                     </button>
                 </div>
 
-                {/* Navigation */}
+                {/* 导航 */}
                 <nav className="flex-1 overflow-y-auto px-3">
-                    {/* Search */}
+                    {/* 搜索 */}
                     <div className="px-1 py-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1001,7 +1001,7 @@ export default function ChatPage() {
                         )}
                     </div>
 
-                    {/* Features */}
+                    {/* 功能 */}
                     <div className="mt-1 space-y-0.5">
                         <Link
                             href="/"
@@ -1033,7 +1033,7 @@ export default function ChatPage() {
                         </Link>
                     </div>
 
-                    {/* Toggle Features */}
+                    {/* 功能开关 */}
                     <div className="mt-6 px-1">
                         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
                             {t("chatFeatureSwitch")}
@@ -1081,7 +1081,7 @@ export default function ChatPage() {
                         </div>
                     </div>
 
-                    {/* Recent Chats */}
+                    {/* 最近对话 */}
                     <div className="mt-6 px-1">
                         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
                             {searchQuery
@@ -1137,9 +1137,9 @@ export default function ChatPage() {
                 </nav>
             </aside>
 
-            {/* Main Content */}
+            {/* 主内容 */}
             <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d0d0d]">
-                {/* Header */}
+                {/* 标题栏 */}
                 <header className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">
                         <button
@@ -1202,16 +1202,16 @@ export default function ChatPage() {
                     </div>
                 </header>
 
-                {/* Chat Area */}
+                {/* 聊天区域 */}
                 <div className="flex-1 overflow-y-auto">
                     {messages.length === 0 ? (
-                        // Welcome Screen
+                        // 欢迎界面
                         <div className="flex flex-col items-center justify-center h-full px-4">
                             <h1 className="text-4xl font-semibold text-gray-900 dark:text-gray-100 mb-10 tracking-tight">
                                 {t("chatWelcome")}
                             </h1>
 
-                            {/* Suggestions */}
+                            {/* 建议 */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl w-full mb-8">
                                 {[
                                     t("chatSuggestion1"),
@@ -1230,7 +1230,7 @@ export default function ChatPage() {
                             </div>
                         </div>
                     ) : (
-                        // Messages
+                        // 消息列表
                         <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
                             {messages.map((message) => (
                                 <div
@@ -1238,7 +1238,7 @@ export default function ChatPage() {
                                     className={`flex gap-4 group ${message.role === "user" ? "flex-row-reverse" : ""
                                         }`}
                                 >
-                                    {/* Avatar */}
+                                    {/* 头像 */}
                                     <div
                                         className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${message.role === "user"
                                             ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
@@ -1248,7 +1248,7 @@ export default function ChatPage() {
                                         {message.role === "user" ? "U" : "AI"}
                                     </div>
 
-                                    {/* Content */}
+                                    {/* 内容 */}
                                     <div
                                         className={`flex-1 ${message.role === "user" ? "text-right" : ""
                                             }`}
@@ -1284,7 +1284,7 @@ export default function ChatPage() {
                                             )}
                                         </div>
 
-                                        {/* Message Actions - Only for assistant messages */}
+                                        {/* 消息操作 - 仅助手消息显示 */}
                                         {message.role === "assistant" && (
                                             <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
@@ -1484,7 +1484,7 @@ export default function ChatPage() {
                     </div>
                 )}
 
-                {/* Input Area */}
+                {/* 输入区域 */}
                 <div className="px-4 pb-6 pt-2">
                     <div className="max-w-3xl mx-auto">
                         <div
@@ -1536,7 +1536,7 @@ export default function ChatPage() {
                                     ))}
                                 </div>
                             )}
-                            {/* Input Actions - Top Row */}
+                            {/* 输入操作 - 顶部一行 */}
                             <div className="flex items-center gap-1 px-3 pt-2 pb-1">
                                 <button
                                     type="button"
@@ -1572,7 +1572,7 @@ export default function ChatPage() {
                                 rows={1}
                             />
 
-                            {/* Send Button */}
+                            {/* 发送按钮 */}
                             <div className="flex justify-end px-3 pb-3">
                                 <button
                                     data-send-button="true"
@@ -1588,7 +1588,7 @@ export default function ChatPage() {
                             </div>
                         </div>
 
-                        {/* Features indicator */}
+                        {/* 功能状态指示 */}
                         <div className="flex items-center justify-center gap-2 mt-3">
                             {useRAG && (
                                 <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1 rounded-full font-medium">

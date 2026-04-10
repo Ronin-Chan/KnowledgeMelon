@@ -223,7 +223,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     contextWindow: 1000000,
   },
 
-  // DeepSeek
+  // DeepSeek 模型。
   {
     id: "deepseek-chat",
     name: "DeepSeek Chat",
@@ -299,7 +299,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     contextWindow: 200000,
   },
 
-  // Moonshot
+  // Moonshot 模型。
   {
     id: "kimi-k2.5",
     name: "Kimi K2.5",
@@ -336,7 +336,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     contextWindow: 128000,
   },
 
-  // Cohere
+  // Cohere 模型。
   {
     id: "command-r",
     name: "Command R",
@@ -352,7 +352,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     contextWindow: 128000,
   },
 
-  // Mistral
+  // Mistral 模型。
   {
     id: "mistral-large-latest",
     name: "Mistral Large",
@@ -450,24 +450,24 @@ interface ApiKeys {
 }
 
 interface SettingsStore {
-  // Legacy single key (for backward compat)
+  // 旧版单一密钥（兼容旧数据）。
   openaiApiKey: string;
   model: string;
   theme: "light" | "dark";
   locale: "zh" | "en";
 
-  // New multi-provider keys
+  // 新的多提供商密钥。
   apiKeys: ApiKeys;
   baseUrls: { [provider: string]: string };
   selectedProvider: string;
 
-  // Feature toggles (persisted)
+  // 功能开关（会持久化）。
   useRAG: boolean;
   useMemory: boolean;
   useTools: boolean;
   useLocalEmbedding: boolean;
 
-  // Actions
+  // 操作。
   setOpenaiApiKey: (key: string) => void;
   setModel: (model: string) => void;
   setTheme: (theme: "light" | "dark") => void;
@@ -486,18 +486,18 @@ interface SettingsStore {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set, get) => ({
-      // Legacy
+      // 旧版。
       openaiApiKey: "",
       model: "gpt-5-mini",
       theme: "light",
       locale: "zh",
 
-      // New
+      // 新版。
       apiKeys: {},
       baseUrls: {},
       selectedProvider: "openai",
 
-      // Feature toggles
+      // 功能开关。
       useRAG: false,
       useMemory: false,
       useTools: false,
@@ -530,7 +530,7 @@ export const useSettingsStore = create<SettingsStore>()(
         const model = SUPPORTED_MODELS.find((m) => m.id === state.model);
         const modelProvider = model?.provider || provider;
 
-        // Try to get key for the model's provider
+        // 尝试获取当前模型对应提供商的密钥。
         return (
           state.apiKeys[modelProvider] ||
           (modelProvider === "openai" ? state.openaiApiKey : "")

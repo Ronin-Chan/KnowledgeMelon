@@ -23,7 +23,7 @@ class MemorySettingsRequest(BaseModel):
 
 
 async def get_memory_settings_from_db(session: AsyncSession) -> dict:
-    """Get memory settings from database"""
+    """从数据库读取记忆设置。"""
     result = await session.execute(select(MemorySetting))
     settings = {s.key: s.value for s in result.scalars().all()}
 
@@ -36,7 +36,7 @@ async def get_memory_settings_from_db(session: AsyncSession) -> dict:
 
 
 async def save_memory_settings_to_db(session: AsyncSession, settings: dict):
-    """Save memory settings to database"""
+    """将记忆设置保存到数据库。"""
     settings_map = {
         "auto_extract": str(settings.get("auto_extract", True)).lower(),
         "whitelist_topics": ",".join(settings.get("whitelist_topics", [])),
@@ -67,7 +67,7 @@ async def create_memory(
     base_url: str = "",
     session: AsyncSession = Depends(get_session)
 ):
-    """Create a new memory manually"""
+    """手动创建一条记忆。"""
     if not api_key:
         raise HTTPException(400, "API key required for embedding generation")
 
@@ -95,7 +95,7 @@ async def list_memories(
     category: Optional[str] = None,
     session: AsyncSession = Depends(get_session)
 ):
-    """List all memories"""
+    """列出所有记忆。"""
     memories = await memory_service.list_memories(session, category)
     
     return [
@@ -120,7 +120,7 @@ async def search_memories(
     limit: int = 5,
     session: AsyncSession = Depends(get_session)
 ):
-    """Search memories by semantic similarity"""
+    """按语义相似度搜索记忆。"""
     if not api_key:
         raise HTTPException(400, "API key required")
 
@@ -144,7 +144,7 @@ async def update_memory(
     data: MemoryUpdate,
     session: AsyncSession = Depends(get_session)
 ):
-    """Update a memory"""
+    """更新一条记忆。"""
     memory = await memory_service.update_memory(
         memory_id, session, content=data.content, importance=data.importance
     )
@@ -164,7 +164,7 @@ async def delete_memory(
     memory_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    """Delete a memory"""
+    """删除一条记忆。"""
     success = await memory_service.delete_memory(memory_id, session)
     
     if not success:
@@ -178,7 +178,7 @@ async def extract_memories(
     api_key: str = "",
     session: AsyncSession = Depends(get_session)
 ):
-    """Extract memories from conversation text"""
+    """从对话文本中提取记忆。"""
     if not api_key:
         raise HTTPException(400, "API key required")
 
@@ -201,7 +201,7 @@ async def extract_memories(
 async def get_memory_settings(
     session: AsyncSession = Depends(get_session)
 ):
-    """Get memory extraction settings"""
+    """获取记忆提取设置。"""
     settings = await get_memory_settings_from_db(session)
     return settings
 
@@ -211,7 +211,7 @@ async def update_memory_settings(
     request: MemorySettingsRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    """Update memory extraction settings"""
+    """更新记忆提取设置。"""
     settings = {
         "auto_extract": request.auto_extract,
         "whitelist_topics": request.whitelist_topics,
@@ -227,15 +227,15 @@ async def check_topic_allowed(
     topic: str,
     session: AsyncSession = Depends(get_session)
 ):
-    """Check if a topic is allowed based on whitelist/blacklist"""
+    """根据白名单和黑名单判断某个主题是否允许。"""
     settings = await get_memory_settings_from_db(session)
 
-    # Check blacklist first
+    # 先检查黑名单。
     for blacklisted in settings["blacklist_topics"]:
         if blacklisted.lower() in topic.lower():
             return {"allowed": False, "reason": f"Topic matches blacklist: {blacklisted}"}
 
-    # If whitelist exists, topic must match at least one
+    # 如果存在白名单，则主题必须至少命中一项。
     if settings["whitelist_topics"]:
         for whitelisted in settings["whitelist_topics"]:
             if whitelisted.lower() in topic.lower():
