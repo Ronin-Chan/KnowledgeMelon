@@ -28,6 +28,15 @@ KnowledgeMelon is a local AI knowledge workspace for chatting with documents, st
 - PostgreSQL with pgvector
 - Python 3.13
 
+### AI
+
+- LangChain
+- LangChain OpenAI
+- LiteLLM
+- OpenAI Python SDK
+- Tiktoken
+- ZhipuAI SDK
+
 ## Project Structure
 
 ```text
