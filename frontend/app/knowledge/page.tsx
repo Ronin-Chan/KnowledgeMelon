@@ -722,9 +722,9 @@ export default function KnowledgePage() {
 
       {/* 主内容 */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-8 py-12">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
           {/* 标题栏 */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("knowledgeTitle")}</h1>
               <p className="text-muted-foreground">{t("knowledgeSubtitle")}</p>
@@ -761,7 +761,7 @@ export default function KnowledgePage() {
           </div>
 
           {/* 本地 Embedding 开关 */}
-          <div className="flex items-center justify-between p-4 mb-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+          <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
                 className={`w-2 h-2 rounded-full ${localOllamaStatus ? "bg-emerald-500" : "bg-gray-400"}`}
