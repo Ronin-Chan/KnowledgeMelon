@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     apiKey: str
     model: str = "gpt-4.1-mini"
     baseUrl: Optional[str] = None
+    response_length: str = "balanced"
 
 
 class DocumentResponse(BaseModel):
@@ -56,6 +57,7 @@ class RAGChatRequest(BaseModel):
     apiKey: str
     model: str = "gpt-4.1-mini"
     baseUrl: Optional[str] = None
+    response_length: str = "balanced"
 
 
 # 记忆相关 schema。

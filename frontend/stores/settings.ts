@@ -14,6 +14,7 @@ export interface LocalizedModelConfig extends ModelConfig {
 }
 
 type Locale = "zh" | "en";
+export type ResponseLength = "concise" | "balanced" | "detailed";
 
 const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
   gpt_5_4: {
@@ -440,6 +441,7 @@ interface SettingsStore {
   model: string;
   theme: "light" | "dark";
   locale: "zh" | "en";
+  responseLength: ResponseLength;
   apiKeys: ApiKeys;
   baseUrls: { [provider: string]: string };
   selectedProvider: string;
@@ -452,6 +454,7 @@ interface SettingsStore {
   setTheme: (theme: "light" | "dark") => void;
   toggleTheme: () => void;
   setLocale: (locale: "zh" | "en") => void;
+  setResponseLength: (value: ResponseLength) => void;
   setApiKey: (provider: string, key: string) => void;
   setBaseUrl: (provider: string, url: string) => void;
   setSelectedProvider: (provider: string) => void;
@@ -477,6 +480,7 @@ export const useSettingsStore = create<SettingsStore>()(
       model: "gpt-5-mini",
       theme: "dark",
       locale: "en",
+      responseLength: "balanced",
       apiKeys: {},
       baseUrls: {},
       selectedProvider: "openai",
@@ -489,6 +493,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setModel: (model) => set({ model }),
       setTheme: (theme) => set({ theme }),
       setLocale: (locale) => set({ locale }),
+      setResponseLength: (responseLength) => set({ responseLength }),
       toggleTheme: () =>
         set((state) => ({
           theme: state.theme === "dark" ? "light" : "dark",

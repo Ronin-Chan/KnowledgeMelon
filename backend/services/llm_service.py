@@ -34,6 +34,44 @@ def _to_text(value: Any) -> str:
 class LLMService:
     WEB_SEARCH_TOOL_NAME = "web_search"
 
+    def _normalize_response_length(self, response_length: Optional[str]) -> str:
+        value = (response_length or "balanced").strip().lower()
+        if value in {"concise", "balanced", "detailed"}:
+            return value
+        return "balanced"
+
+    def _response_controls(self, response_length: Optional[str]) -> Dict[str, Any]:
+        level = self._normalize_response_length(response_length)
+        controls = {
+            "concise": {
+                "max_tokens": 500,
+                "temperature": 0.35,
+                "style_prompt": (
+                    "Keep the answer concise and focused. "
+                    "Use short paragraphs or bullets, but avoid fragmented one-line replies. "
+                    "Prefer complete sentences."
+                ),
+            },
+            "balanced": {
+                "max_tokens": 900,
+                "temperature": 0.45,
+                "style_prompt": (
+                    "Keep the answer moderately detailed. "
+                    "Use normal paragraphs, and only use bullets when they genuinely improve clarity. "
+                    "Avoid overly short sentence fragments."
+                ),
+            },
+            "detailed": {
+                "max_tokens": 1500,
+                "temperature": 0.55,
+                "style_prompt": (
+                    "Give a detailed answer with clear structure, examples, and explanations when helpful. "
+                    "Still avoid choppy sentence fragments."
+                ),
+            },
+        }
+        return controls[level]
+
     def infer_provider(self, model: str, base_url: Optional[str] = None) -> str:
         """根据模型名 / base_url 推断实际提供商。"""
         return self._infer_provider(model, base_url)
@@ -184,6 +222,7 @@ class LLMService:
         user_id: Optional[str],
         use_rag: bool,
         use_memory: bool,
+        response_length: Optional[str],
         attachments: Optional[List[Any]] = None,
     ) -> List[Dict[str, Any]]:
         # 这里是整个 AI 请求链路最关键的地方：
@@ -194,6 +233,7 @@ class LLMService:
             # system prompt 作为最底层规则，先定义助手的基本行为。
             "You are a helpful assistant. Answer clearly and accurately."
         ]
+        prompt_sections.append(self._response_controls(response_length)["style_prompt"])
 
         if use_rag and session and api_key and user_id:
             # RAG：从知识库里取和当前问题最相关的文档片段。
@@ -254,6 +294,7 @@ class LLMService:
         session: Optional[AsyncSession] = None,
         history: Optional[List[Any]] = None,
         user_id: Optional[str] = None,
+        response_length: Optional[str] = None,
     ) -> AsyncIterable[str]:
         # 先把最终上下文拼好，再交给模型。
         # 这样上层只需要控制“开没开 RAG / Memory / Tools”，不用关心 prompt 细节。
@@ -267,13 +308,18 @@ class LLMService:
             user_id=user_id,
             use_rag=use_rag,
             use_memory=use_memory,
+            response_length=response_length,
             attachments=attachments,
         )
+
+        response_controls = self._response_controls(response_length)
 
         common_kwargs: Dict[str, Any] = {
             "model": model,
             "api_key": api_key,
             "base_url": base_url,
+            "max_tokens": response_controls["max_tokens"],
+            "temperature": response_controls["temperature"],
         }
 
         if use_tools:

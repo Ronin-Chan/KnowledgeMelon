@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
     useSettingsStore,
     SUPPORTED_MODELS,
@@ -57,6 +57,8 @@ import { resolveEmbeddingConfig } from "@/lib/embedding";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import Link from "next/link";
 import { useLocale, useT } from "@/lib/i18n";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type SpeechRecognitionResultLike = {
     transcript: string;
@@ -107,6 +109,38 @@ interface PendingKnowledgeAttachment {
     file: File;
     name: string;
 }
+
+const DEFAULT_CONVERSATION_TITLES = new Set([
+    "New conversation",
+    "New chat",
+    "New Chat",
+    "新对话",
+    "",
+]);
+
+const isDefaultConversationTitle = (title?: string | null) =>
+    title === undefined || title === null || DEFAULT_CONVERSATION_TITLES.has(title.trim());
+
+const deriveFallbackConversationTitle = (userMessage: string, assistantMessage: string, locale: string) => {
+    const source = (userMessage.trim() || assistantMessage.trim() || "New conversation")
+        .replace(/\s+/g, " ")
+        .replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>]+$/g, "");
+
+    const sentence = source.split(/[。！？!?.\n]/).map((part) => part.trim()).find(Boolean) || source;
+    const cleaned = sentence.replace(/[,:;，：；]+.*$/, "").trim();
+
+    if (!cleaned) {
+        return "New conversation";
+    }
+
+    if (locale === "zh") {
+        return cleaned.length > 18 ? `${cleaned.slice(0, 18)}...` : cleaned;
+    }
+
+    const words = cleaned.split(/\s+/);
+    const shortened = words.length > 8 ? words.slice(0, 8).join(" ") : cleaned;
+    return shortened.length > 42 ? `${shortened.slice(0, 42).trim()}...` : shortened;
+};
 
 export default function ChatPage() {
     const { shouldBlock } = useRequireAuth();
@@ -165,6 +199,8 @@ export default function ChatPage() {
         setUseRAG,
         setUseMemory,
         setUseTools,
+        responseLength,
+        setResponseLength,
     } = useSettingsStore();
     const apiKey = getEffectiveApiKey();
     const currentModel = localizedModels.find((m) => m.id === model);
@@ -196,23 +232,40 @@ export default function ChatPage() {
         return () => mediaQuery.removeEventListener("change", handleChange);
     }, []);
 
-    // 加载对话列表
-    useEffect(() => {
-        fetchConversations();
+    const normalizeConversations = useCallback((items: Conversation[]) => {
+        let seenEmptyConversation = false;
+        return items.filter((conversation) => {
+            if (conversation.message_count > 0) {
+                return true;
+            }
+            if (seenEmptyConversation) {
+                return false;
+            }
+            seenEmptyConversation = true;
+            return true;
+        });
     }, []);
 
-    const fetchConversations = async () => {
+    // 加载对话列表
+    const fetchConversations = useCallback(async () => {
         try {
             const response = await apiFetch(`/api/conversations`);
             if (response.ok) {
                 const data = await response.json();
-                setConversations(data);
-                setFilteredConversations(data);
+                const normalized = normalizeConversations(data);
+                setConversations(normalized);
+                setFilteredConversations(normalized);
+                return normalized;
             }
         } catch (error) {
             console.error("Failed to fetch conversations:", error);
         }
-    };
+        return [];
+    }, [normalizeConversations]);
+
+    useEffect(() => {
+        fetchConversations();
+    }, [fetchConversations]);
 
     // 搜索对话。
     const handleSearchConversations = async () => {
@@ -230,7 +283,7 @@ export default function ChatPage() {
             );
             if (response.ok) {
                 const data = await response.json();
-                setFilteredConversations(data);
+                setFilteredConversations(normalizeConversations(data));
             }
         } catch (error) {
             console.error("Failed to search conversations:", error);
@@ -250,9 +303,19 @@ export default function ChatPage() {
         setFilteredConversations(conversations);
     };
 
+    const getReusableEmptyConversation = () =>
+        conversations.find((conversation) => conversation.message_count === 0);
+
     const createNewConversation = async () => {
         clearCurrentSessionAttachments();
-        if (messages.length === 0) {
+        const reusableEmptyConversation = getReusableEmptyConversation();
+        if (reusableEmptyConversation) {
+            if (
+                currentConversationId !== reusableEmptyConversation.id ||
+                messages.length > 0
+            ) {
+                await loadConversation(reusableEmptyConversation.id);
+            }
             return;
         }
 
@@ -267,7 +330,7 @@ export default function ChatPage() {
                 setCurrentConversationId(data.id);
                 setMessages([]);
                 clearCurrentSessionAttachments();
-                fetchConversations();
+                await fetchConversations();
             }
         } catch (error) {
             console.error("Failed to create conversation:", error);
@@ -780,6 +843,7 @@ export default function ChatPage() {
 
         // 如果没有当前对话，自动创建
         let conversationId = currentConversationId;
+        const createdConversationThisTurn = !conversationId;
         if (!conversationId) {
             try {
                 const response = await apiFetch(`/api/conversations`, {
@@ -795,13 +859,14 @@ export default function ChatPage() {
                     conversationId = data.id;
                     setCurrentConversationId(data.id);
                     // 刷新对话列表
-                    fetchConversations();
+                    await fetchConversations();
                 }
             } catch (error) {
                 console.error("Failed to create conversation:", error);
             }
         }
 
+        let assistantResponseText = "";
         const userMessage: Message = {
             id: uuidv4(),
             role: "user",
@@ -832,6 +897,7 @@ export default function ChatPage() {
                 apiKey,
                 model,
                 baseUrl: currentModel?.provider ? baseUrls[currentModel.provider] : undefined,
+                response_length: responseLength,
                 attachments: sessionAttachments.map((attachment) => ({
                     name: attachment.name,
                     file_type: attachment.fileType,
@@ -900,6 +966,7 @@ export default function ChatPage() {
                 }
 
                 assistantMessage.content += chunk;
+                assistantResponseText += chunk;
                 setMessages((prev) =>
                     prev.map((msg) =>
                         msg.id === assistantMessage.id
@@ -915,7 +982,35 @@ export default function ChatPage() {
         } finally {
             setIsLoading(false);
             if (conversationId) {
-                await fetchConversations();
+                const refreshedConversations = await fetchConversations();
+                if (createdConversationThisTurn) {
+                    const refreshedConversation = refreshedConversations.find(
+                        (conversation) => conversation.id === conversationId,
+                    );
+
+                    if (
+                        refreshedConversation &&
+                        isDefaultConversationTitle(refreshedConversation.title) &&
+                        assistantResponseText.trim()
+                    ) {
+                        const fallbackTitle = deriveFallbackConversationTitle(
+                            userMessage.content,
+                            assistantResponseText,
+                            locale,
+                        );
+
+                        try {
+                            await apiFetch(`/api/conversations/${conversationId}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ title: fallbackTitle }),
+                            });
+                            await fetchConversations();
+                        } catch (error) {
+                            console.error("Failed to update fallback conversation title:", error);
+                        }
+                    }
+                }
             }
         }
     };
@@ -987,13 +1082,13 @@ export default function ChatPage() {
 
             {/* 侧边栏 */}
             <aside
-                className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-[#f9f9f9] dark:bg-[#0d0d0d] transition-transform duration-300 md:relative md:z-auto md:max-w-none md:translate-x-0 md:transition-[width,transform] ${sidebarOpen ? "translate-x-0 md:w-72" : "-translate-x-full md:translate-x-0 md:w-0 md:border-r-0"}`}
+                className={`fixed inset-y-0 left-0 z-40 flex w-64 max-w-[80vw] flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-[#f9f9f9] dark:bg-[#0d0d0d] transition-transform duration-300 md:relative md:z-auto md:max-w-none md:translate-x-0 md:transition-[width,transform] ${sidebarOpen ? "translate-x-0 md:w-64" : "-translate-x-full md:translate-x-0 md:w-0 md:border-r-0"}`}
             >
                 {/* 新建对话按钮 */}
-                <div className="p-4">
+                <div className="p-3">
                     <button
                         onClick={createNewConversation}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all text-sm font-medium text-gray-700 dark:text-gray-200"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
                         <Plus className="h-4 w-4 text-gray-500" />
                         {t("chatNewConversation")}
@@ -1001,9 +1096,9 @@ export default function ChatPage() {
                 </div>
 
                 {/* 导航 */}
-                <nav className="flex-1 overflow-y-auto px-3">
+                <nav className="flex flex-1 min-h-0 flex-col overflow-hidden px-2.5">
                     {/* 搜索 */}
-                    <div className="px-1 py-1">
+                    <div className="px-0.5 py-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <input
@@ -1065,7 +1160,7 @@ export default function ChatPage() {
                     </div>
 
                     {/* 功能开关 */}
-                    <div className="mt-6 px-1">
+                    <div className="mt-6 flex min-h-0 flex-1 flex-col px-1">
                         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
                             {t("chatFeatureSwitch")}
                         </p>
@@ -1110,59 +1205,58 @@ export default function ChatPage() {
                                 )}
                             </button>
                         </div>
-                    </div>
-
-                    {/* 最近对话 */}
-                    <div className="mt-6 px-1">
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
-                            {searchQuery
-                                ? `${t("chatSearchResultsHeader")} (${filteredConversations.length})`
-                                : `${t("chatRecentHeader")} (${conversations.length})`}
-                        </p>
-                        <div className="space-y-0.5 max-h-[280px] overflow-y-auto">
-                            {filteredConversations.length === 0 && searchQuery ? (
-                                <p className="text-sm text-gray-400 px-3 py-2">
-                                    {t("chatNoMatchesHint")}
-                                </p>
-                            ) : (
-                                filteredConversations.map((chat) => (
-                                    <div
-                                        key={chat.id}
-                                        className={`group flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm transition-all w-full ${currentConversationId === chat.id
-                                            ? "bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/50"
-                                            }`}
-                                    >
-                                        <button
-                                            onClick={() => loadConversation(chat.id)}
-                                            className="flex flex-1 items-start gap-3 text-left min-w-0"
+                        <div className="mt-6 flex min-h-0 flex-1 flex-col">
+                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
+                                {searchQuery
+                                    ? `${t("chatSearchResultsHeader")} (${filteredConversations.length})`
+                                    : `${t("chatRecentHeader")} (${conversations.length})`}
+                            </p>
+                            <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5 pr-1">
+                                {filteredConversations.length === 0 && searchQuery ? (
+                                    <p className="text-sm text-gray-400 px-3 py-2">
+                                        {t("chatNoMatchesHint")}
+                                    </p>
+                                ) : (
+                                    filteredConversations.map((chat) => (
+                                        <div
+                                            key={chat.id}
+                                            title={chat.title}
+                                            className={`group flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm transition-all w-full ${currentConversationId === chat.id
+                                                ? "bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/50"
+                                                }`}
                                         >
-                                            <MessageSquare className="h-4 w-4 shrink-0 mt-0.5 text-gray-400" />
-                                            <div className="flex-1 min-w-0">
-                                                <span className="truncate block font-medium">
-                                                    {chat.title}
-                                                </span>
-                                                <span className="text-xs text-gray-400">
-                                                    {formatDate(chat.updated_at)} · {t("chatMessageCount", {
-                                                        count: chat.message_count,
-                                                    })}
-                                                </span>
-                                            </div>
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setPendingDeleteConversation(chat.id);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-950/40 text-gray-400 hover:text-red-500 transition-all"
-                                            title={t("chatDeleteConversation")}
-                                            aria-label={t("chatDeleteConversation")}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                ))
-                            )}
+                                            <button
+                                                onClick={() => loadConversation(chat.id)}
+                                                className="flex flex-1 items-start gap-3 text-left min-w-0"
+                                            >
+                                                <MessageSquare className="h-4 w-4 shrink-0 mt-0.5 text-gray-400" />
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="truncate block font-medium" title={chat.title}>
+                                                        {chat.title}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">
+                                                        {formatDate(chat.updated_at)} · {t("chatMessageCount", {
+                                                            count: chat.message_count,
+                                                        })}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPendingDeleteConversation(chat.id);
+                                                }}
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-950/40 text-gray-400 hover:text-red-500 transition-all"
+                                                title={t("chatDeleteConversation")}
+                                                aria-label={t("chatDeleteConversation")}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
                 </nav>
@@ -1230,6 +1324,31 @@ export default function ChatPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        <div className="flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1">
+                            {(["concise", "balanced", "detailed"] as const).map((value) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => setResponseLength(value)}
+                                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${responseLength === value
+                                        ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                        }`}
+                                >
+                                    {locale === "zh"
+                                        ? value === "concise"
+                                            ? "简短"
+                                            : value === "balanced"
+                                                ? "标准"
+                                                : "详细"
+                                        : value === "concise"
+                                            ? "Short"
+                                            : value === "balanced"
+                                                ? "Balanced"
+                                                : "Detailed"}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </header>
 
@@ -1262,7 +1381,7 @@ export default function ChatPage() {
                         </div>
                     ) : (
                         // 消息列表
-                        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+                        <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
                             {messages.map((message) => (
                                 <div
                                     key={message.id}
@@ -1285,7 +1404,7 @@ export default function ChatPage() {
                                             }`}
                                     >
                                         <div
-                                            className={`inline-block text-left max-w-6xl px-4 py-3 rounded-2xl ${message.role === "user"
+                                            className={`inline-block text-left max-w-5xl px-3 py-2.5 rounded-2xl ${message.role === "user"
                                                 ? "bg-gray-900 dark:bg-blue-600 text-white rounded-br-md"
                                                 : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 rounded-bl-md shadow-sm"
                                                 }`}
@@ -1309,9 +1428,17 @@ export default function ChatPage() {
                                                     />
                                                 </div>
                                             ) : (
-                                                <p className="whitespace-pre-wrap leading-relaxed">
-                                                    {message.content}
-                                                </p>
+                                                message.role === "assistant" ? (
+                                                    <div className="prose prose-sm max-w-none break-words leading-relaxed text-sm dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-code:break-words prose-pre:my-1.5 prose-pre:overflow-x-auto">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {message.content}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                ) : (
+                                                    <p className="whitespace-pre-wrap leading-relaxed text-sm">
+                                                        {message.content}
+                                                    </p>
+                                                )
                                             )}
                                         </div>
 
@@ -1493,7 +1620,7 @@ export default function ChatPage() {
                 {/* 错误提示横幅 */}
                 {errorMessage && (
                     <div className="px-4 pt-2">
-                        <div className="max-w-4xl mx-auto">
+                        <div className="max-w-5xl mx-auto">
                             <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm shadow-sm">
                                 <span className="font-medium">{errorMessage}</span>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1517,7 +1644,7 @@ export default function ChatPage() {
 
                 {/* 输入区域 */}
                 <div className="px-4 pb-6 pt-2">
-                    <div className="max-w-4xl mx-auto">
+                    <div className="max-w-5xl mx-auto">
                         <div
                             className={`bg-white dark:bg-gray-900 rounded-3xl border shadow-lg hover:shadow-xl transition-shadow ${isDraggingFile
                                 ? "border-blue-400 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900/40"
@@ -1599,7 +1726,7 @@ export default function ChatPage() {
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder={t("chatSendingPlaceholder")}
-                                className="w-full min-h-[40px] max-h-[200px] bg-transparent resize-none px-4 pb-3 pt-1 text-base focus:outline-none text-gray-800 dark:text-gray-200 placeholder:text-gray-400"
+                                className="w-full min-h-[40px] max-h-[200px] bg-transparent resize-none px-3 pb-2.5 pt-1 text-sm focus:outline-none text-gray-800 dark:text-gray-200 placeholder:text-gray-400"
                                 rows={1}
                             />
 
@@ -1656,5 +1783,6 @@ export default function ChatPage() {
         </div>
     );
 }
+
 
 

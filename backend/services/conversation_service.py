@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 import uuid
 from typing import Dict, List, Optional
 
@@ -275,7 +275,7 @@ class ConversationService:
         if not conversation:
             return None
 
-        default_titles = {"New conversation", "New chat", "", None}
+        default_titles = {"New conversation", "New chat", "New Chat", "新对话", "", None}
         if conversation.title not in default_titles:
             return conversation.title
 
@@ -300,3 +300,4 @@ class ConversationService:
 
 
 conversation_service = ConversationService()
+

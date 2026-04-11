@@ -120,6 +120,7 @@ async def chat(
                 session=session,
                 history=optimized_context,
                 user_id=str(current_user.id),
+                response_length=request.response_length,
             ):
                 assistant_content += chunk
                 yield chunk
@@ -200,6 +201,7 @@ async def chat_with_rag(
                 session=session,
                 history=optimized_context,
                 user_id=str(current_user.id),
+                response_length=request.response_length,
             ):
                 assistant_content += chunk
                 yield chunk
