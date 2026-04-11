@@ -19,6 +19,33 @@ export const metadata: Metadata = {
   description: "Your workspace for knowledge, memory, and chat",
 };
 
+const themeInitScript = `
+(() => {
+  try {
+    const raw = localStorage.getItem("settings-storage");
+    const parsed = raw ? JSON.parse(raw) : null;
+    const theme = parsed?.state?.theme === "dark" ? "dark" : "light";
+    const root = document.documentElement;
+    const bg = theme === "dark" ? "#171717" : "#ffffff";
+    const fg = theme === "dark" ? "#fafafa" : "#171717";
+
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme;
+    root.style.backgroundColor = bg;
+    root.style.color = fg;
+
+    const applyBodyTheme = () => {
+      if (!document.body) return;
+      document.body.style.backgroundColor = bg;
+      document.body.style.color = fg;
+    };
+
+    applyBodyTheme();
+    document.addEventListener("DOMContentLoaded", applyBodyTheme, { once: true });
+  } catch (_) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,6 +53,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <meta name="color-scheme" content="dark light" />
+        <style>{`html,body{min-height:100%;background:#171717;color:#fafafa;}`}</style>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >

@@ -6,6 +6,8 @@ python-multipart==0.0.21
 sqlalchemy==2.0.44
 asyncpg==0.31.0
 pgvector==0.4.2
+cryptography==45.0.7
+email-validator==2.3.0
 langchain==1.1.0
 langchain-openai==1.1.11
 openai==2.26.0

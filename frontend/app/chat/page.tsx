@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import {
@@ -52,8 +52,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { API_BASE_URL } from "@/lib/api";
+import { apiFetch, API_BASE_URL } from "@/lib/api";
 import { resolveEmbeddingConfig } from "@/lib/embedding";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import Link from "next/link";
 import { useLocale, useT } from "@/lib/i18n";
 
@@ -108,6 +109,7 @@ interface PendingKnowledgeAttachment {
 }
 
 export default function ChatPage() {
+    const { shouldBlock } = useRequireAuth();
     const t = useT();
     const locale = useLocale();
     const localizedModels = getLocalizedModels(locale);
@@ -201,7 +203,7 @@ export default function ChatPage() {
 
     const fetchConversations = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/conversations`);
+            const response = await apiFetch(`/api/conversations`);
             if (response.ok) {
                 const data = await response.json();
                 setConversations(data);
@@ -223,7 +225,7 @@ export default function ChatPage() {
         try {
             const params = new URLSearchParams();
             params.append("q", searchQuery);
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_BASE_URL}/api/conversations/search?${params.toString()}`,
             );
             if (response.ok) {
@@ -255,7 +257,7 @@ export default function ChatPage() {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/conversations`, {
+            const response = await apiFetch(`/api/conversations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ title: t("chatNewConversationTitle"), model }),
@@ -274,7 +276,7 @@ export default function ChatPage() {
 
     const loadConversation = async (conversationId: string) => {
         try {
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_BASE_URL}/api/conversations/${conversationId}`,
             );
             if (response.ok) {
@@ -312,7 +314,7 @@ export default function ChatPage() {
 
     const handleDeleteConversation = async (conversationId: string) => {
         try {
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_BASE_URL}/api/conversations/${conversationId}`,
                 {
                     method: "DELETE",
@@ -411,7 +413,7 @@ export default function ChatPage() {
         formData.append("file", file);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/chat/attachments/preview`, {
+            const response = await apiFetch(`/api/chat/attachments/preview`, {
                 method: "POST",
                 body: formData,
             });
@@ -512,8 +514,8 @@ export default function ChatPage() {
                 previews.length > 1
                     ? t("chatAttachmentsAttached", { count: previews.length })
                     : t("chatAttachmentAttached", {
-                          name: previews[0].preview.name,
-                      }),
+                        name: previews[0].preview.name,
+                    }),
             );
         } catch (error) {
             console.error("Attachment upload error:", error);
@@ -569,7 +571,7 @@ export default function ChatPage() {
                 embeddingConfig.useLocalEmbedding.toString(),
             );
 
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_BASE_URL}/api/documents/upload?${params.toString()}`,
                 {
                     method: "POST",
@@ -780,7 +782,7 @@ export default function ChatPage() {
         let conversationId = currentConversationId;
         if (!conversationId) {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/conversations`, {
+                const response = await apiFetch(`/api/conversations`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -837,7 +839,7 @@ export default function ChatPage() {
                 })),
             };
 
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const response = await apiFetch(`${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(
@@ -967,6 +969,10 @@ export default function ChatPage() {
             sendButton?.click();
         }, 0);
     };
+
+    if (shouldBlock) {
+        return null;
+    }
 
     return (
         <div className="relative flex h-screen bg-background">
@@ -1181,11 +1187,11 @@ export default function ChatPage() {
                             value={model}
                             onValueChange={(value) => {
                                 const m = SUPPORTED_MODELS.find((mod) => mod.id === value);
-                            if (m) {
-                                setModel(m.id);
-                                setSelectedProvider(m.provider);
-                            }
-                        }}
+                                if (m) {
+                                    setModel(m.id);
+                                    setSelectedProvider(m.provider);
+                                }
+                            }}
                         >
                             <SelectTrigger className="w-full min-w-0 text-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600 transition-colors sm:w-[320px]">
                                 <SelectValue placeholder={t("chatSelectModel")}>
@@ -1217,7 +1223,7 @@ export default function ChatPage() {
                                             </span>
                                             <span className="text-xs text-gray-500 leading-relaxed wrap-break-word w-full">
                                                 {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
-                                                {m.descriptionKey}
+                                                {m.description}
                                             </span>
                                         </div>
                                     </SelectItem>
@@ -1650,3 +1656,5 @@ export default function ChatPage() {
         </div>
     );
 }
+
+

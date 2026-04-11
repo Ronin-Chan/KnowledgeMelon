@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Menu, Brain, BookOpen, Home, MessageSquare, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { useAuthStore } from "@/stores/auth";
+import { useSettingsStore } from "@/stores/settings";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +25,40 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useT();
+  const locale = useSettingsStore((state) => state.locale);
+  const setLocale = useSettingsStore((state) => state.setLocale);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { token, user, hydrated, clearAuth } = useAuthStore();
+  const resetProviderSettings = useSettingsStore(
+    (state) => state.resetProviderSettings,
+  );
+  const isProtectedRoute =
+    pathname !== "/" && !pathname.startsWith("/auth/");
+  const shouldRedirectToLogin = hydrated && isProtectedRoute && !token;
+
+  useEffect(() => {
+    if (shouldRedirectToLogin) {
+      router.replace("/auth/login");
+    }
+  }, [router, shouldRedirectToLogin]);
+
+  const handleLogout = () => {
+    clearAuth();
+    resetProviderSettings();
+    router.push("/auth/login");
+  };
+
+  const toggleLocale = () => setLocale(locale === "zh" ? "en" : "zh");
+
+  if (!hydrated && isProtectedRoute) {
+    return null;
+  }
+
+  if (shouldRedirectToLogin) {
+    return null;
+  }
 
   const renderNavItems = (onNavigate?: () => void) =>
     NAV_ITEMS.map((item) => {
@@ -60,29 +95,78 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="text-sm text-muted-foreground">{t("appTagline")}</div>
         </div>
-        <button
-          type="button"
-          onClick={() => setMobileNavOpen(true)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground shadow-sm"
-          aria-label={t("navHome")}
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground shadow-sm"
+          >
+            {locale === "zh" ? "EN" : "中文"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground shadow-sm"
+            aria-label={t("navHome")}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar-background/95 backdrop-blur md:flex">
-        <div className="px-5 py-5 border-b border-sidebar-border">
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar-background/95 backdrop-blur md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+        <div className="flex items-start justify-between border-b border-sidebar-border px-5 py-5">
           <div className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
             {t("appName")}
           </div>
-          <div className="mt-2 text-sm text-muted-foreground">
-            {t("appTagline")}
-          </div>
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="rounded-xl border border-sidebar-border bg-card px-3 py-2 text-xs text-foreground"
+          >
+            {locale === "zh" ? "EN" : "中文"}
+          </button>
+        </div>
+        <div className="px-5 py-3 text-sm text-muted-foreground">
+          {t("appTagline")}
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">{renderNavItems()}</nav>
 
-        <div className="p-4 border-t border-sidebar-border" />
+        <div className="border-t border-sidebar-border p-4">
+          {user ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-sidebar-border bg-card px-3 py-3">
+                <div className="text-sm font-medium text-foreground">
+                  {user.username}
+                </div>
+                <div className="text-xs text-muted-foreground">{user.email}</div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-xl border border-sidebar-border px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+              >
+                {locale === "zh" ? "登出" : "Logout"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Link
+                href="/auth/login"
+                className="block rounded-xl border border-sidebar-border px-3 py-2.5 text-sm text-center text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+              >
+                {locale === "zh" ? "登录" : "Login"}
+              </Link>
+              <Link
+                href="/auth/register"
+                className="block rounded-xl bg-foreground px-3 py-2.5 text-sm text-center text-background"
+              >
+                {locale === "zh" ? "注册" : "Register"}
+              </Link>
+            </div>
+          )}
+        </div>
       </aside>
 
       <Dialog open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -100,6 +184,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <nav className="flex-1 px-3 py-4 space-y-1">
               {renderNavItems(() => setMobileNavOpen(false))}
             </nav>
+            {user && (
+              <div className="border-t border-sidebar-border p-4">
+                <div className="rounded-xl border border-sidebar-border bg-card px-3 py-3">
+                  <div className="text-sm font-medium text-foreground">
+                    {user.username}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{user.email}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    handleLogout();
+                  }}
+                  className="mt-3 w-full rounded-xl border border-sidebar-border px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+                >
+                  {locale === "zh" ? "登出" : "Logout"}
+                </button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

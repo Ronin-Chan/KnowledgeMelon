@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect } from "react";
 import { useSettingsStore, SUPPORTED_MODELS } from "@/stores/settings";
@@ -46,10 +46,10 @@ import {
   Tag,
   Star,
 } from "lucide-react";
-import { API_BASE_URL } from "@/lib/api";
+import { apiFetch, API_BASE_URL } from "@/lib/api";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
 
 interface Memory {
   id: string;
@@ -105,21 +105,24 @@ export default function MemoriesPage() {
   const [newBlacklistItem, setNewBlacklistItem] = useState("");
   const { apiKeys, openaiApiKey, model, baseUrls } = useSettingsStore();
   const t = useT();
+  const locale = useLocale();
   const categoryLabels = {
     fact: t("memoriesCategoryFact"),
     preference: t("memoriesCategoryPreference"),
     goal: t("memoriesCategoryGoal"),
     important: t("memoriesCategoryImportant"),
   };
-
-  // 获取当前模型的提供商和 API key。
   const currentModel = SUPPORTED_MODELS.find((m) => m.id === model);
   const provider = currentModel?.provider || "openai";
   const apiKey =
     apiKeys[provider] || (provider === "openai" ? openaiApiKey : "") || "";
   const baseUrl = baseUrls[provider] || "";
-
-  // Toast 辅助函数。
+  const formatMemoryDate = (date: string) =>
+    new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(new Date(date));
   const showToast = useCallback((type: Toast["type"], message: string) => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -130,7 +133,7 @@ export default function MemoriesPage() {
 
   const fetchMemories = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/memories/`);
+      const response = await apiFetch(`/api/memories/`);
       if (response.ok) {
         const data = await response.json();
         setMemories(data);
@@ -145,7 +148,7 @@ export default function MemoriesPage() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/memories/settings`);
+      const response = await apiFetch(`/api/memories/settings`);
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
@@ -181,7 +184,7 @@ export default function MemoriesPage() {
       params.append("provider", provider);
       if (baseUrl) params.append("base_url", baseUrl);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/memories/?${params.toString()}`,
         {
           method: "POST",
@@ -204,7 +207,7 @@ export default function MemoriesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/memories/${id}`, {
+      const response = await apiFetch(`/api/memories/${id}`, {
         method: "DELETE",
       });
 
@@ -223,7 +226,7 @@ export default function MemoriesPage() {
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/memories/settings`, {
+      const response = await apiFetch(`/api/memories/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
@@ -306,7 +309,7 @@ export default function MemoriesPage() {
       params.append("provider", provider);
       if (baseUrl) params.append("base_url", baseUrl);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/memories/search?${params.toString()}`,
       );
       if (response.ok) {
@@ -346,8 +349,7 @@ export default function MemoriesPage() {
 
   return (
     <AppShell>
-      {/* Toast 通知 */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
+<div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -366,9 +368,7 @@ export default function MemoriesPage() {
           </div>
         ))}
       </div>
-
-      {/* 侧边栏 */}
-      <aside className="hidden">
+<aside className="hidden">
         <div className="p-4">
           <Link
             href="/chat"
@@ -407,12 +407,9 @@ export default function MemoriesPage() {
           </Link>
         </nav>
       </aside>
-
-      {/* 主内容 */}
-      <main className="flex-1 overflow-y-auto">
+<main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-          {/* 标题栏 */}
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("memoriesTitle")}</h1>
               <p className="text-muted-foreground">{t("memoriesSubtitle")}</p>
@@ -429,9 +426,7 @@ export default function MemoriesPage() {
               </Button>
             </div>
           </div>
-
-          {/* 设置摘要 */}
-          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="p-4 rounded-lg border border-border bg-card">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-4 w-4 text-purple-500" />
@@ -460,9 +455,7 @@ export default function MemoriesPage() {
               </p>
             </div>
           </div>
-
-          {/* 搜索 */}
-          <div className="mb-6 flex flex-col gap-2 sm:flex-row">
+<div className="mb-6 flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -477,9 +470,7 @@ export default function MemoriesPage() {
               {t("memoriesSearch")}
             </Button>
           </div>
-
-          {/* 添加记忆表单 */}
-          {showAddForm && (
+{showAddForm && (
             <div className="border border-border rounded-xl p-6 mb-6">
               <h3 className="font-medium mb-4">{t("memoriesAddNewTitle")}</h3>
               <div className="space-y-4">
@@ -535,9 +526,7 @@ export default function MemoriesPage() {
               </div>
             </div>
           )}
-
-          {/* 记忆列表 */}
-          <div className="border border-border rounded-xl overflow-hidden">
+<div className="border border-border rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -568,25 +557,23 @@ export default function MemoriesPage() {
                         <p className="text-sm leading-relaxed">
                           {memory.content}
                         </p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs text-muted-foreground">
                           {getCategoryBadge(memory.category)}
-                          <span>·</span>
-                          <span>
-                            {t("memoriesImportanceLabel")}: {memory.importance}/10
-                          </span>
-                          <span>·</span>
-                          <span>
-                            {new Date(memory.created_at).toLocaleDateString()}
+                          {memory.source && (
+                            <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5">
+                              {locale === "zh" ? "来源：" : "Source:"} {memory.source}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5">
+                            {locale === "zh" ? "创建于" : "Created"}{" "}
+                            {formatMemoryDate(memory.created_at)}
                           </span>
                           {memory.access_count > 0 && (
-                            <>
-                              <span>·</span>
-                              <span>
-                                {t("memoriesReferencedTimes", {
-                                  count: memory.access_count,
-                                })}
-                              </span>
-                            </>
+                            <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5">
+                              {t("memoriesReferencedTimes", {
+                                count: memory.access_count,
+                              })}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -605,9 +592,7 @@ export default function MemoriesPage() {
           </div>
         </div>
       </main>
-
-      {/* 设置弹窗 */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+<Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
@@ -618,8 +603,7 @@ export default function MemoriesPage() {
           </DialogHeader>
 
           <div className="space-y-6 py-2">
-              {/* 自动提取开关 */}
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+<div className="flex items-center justify-between p-4 rounded-lg border border-border">
                 <div>
                   <p className="font-medium">{t("memoriesAutoExtract")}</p>
                   <p className="text-sm text-muted-foreground">
@@ -646,9 +630,7 @@ export default function MemoriesPage() {
                   />
                 </button>
               </div>
-
-              {/* 最低重要性 */}
-              <div className="space-y-3">
+<div className="space-y-3">
                 <label className="font-medium">{t("memoriesMinImportance")}</label>
                 <p className="text-sm text-muted-foreground">
                   {t("memoriesMinImportanceHint")}
@@ -672,9 +654,7 @@ export default function MemoriesPage() {
                   </span>
                 </div>
               </div>
-
-              {/* 白名单 */}
-              <div className="space-y-3">
+<div className="space-y-3">
                 <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
                   {t("memoriesWhitelistHint")}
@@ -711,9 +691,7 @@ export default function MemoriesPage() {
                   ))}
                 </div>
               </div>
-
-              {/* 黑名单 */}
-              <div className="space-y-3">
+<div className="space-y-3">
                 <label className="font-medium">{t("memoriesBlacklistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
                   {t("memoriesBlacklistHint")}
@@ -751,9 +729,7 @@ export default function MemoriesPage() {
                 </div>
               </div>
             </div>
-
-            {/* 弹窗底部 */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
+<div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
               <Button variant="outline" onClick={() => setShowSettings(false)}>
                 {t("memoriesCancel")}
               </Button>
@@ -801,3 +777,8 @@ export default function MemoriesPage() {
     </AppShell>
   );
 }
+
+
+
+
+

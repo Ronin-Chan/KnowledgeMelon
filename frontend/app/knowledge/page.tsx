@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useSettingsStore, SUPPORTED_MODELS } from "@/stores/settings";
@@ -17,7 +17,7 @@ import {
   FileDigit,
   Download,
 } from "lucide-react";
-import { API_BASE_URL } from "@/lib/api";
+import { apiFetch, API_BASE_URL } from "@/lib/api";
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
@@ -75,7 +75,10 @@ export default function KnowledgePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [localOllamaStatus, setLocalOllamaStatus] = useState<boolean>(false);
+  const [selfOllamaServiceReady, setSelfOllamaServiceReady] =
+    useState<boolean>(false);
+  const [selfOllamaModelReady, setSelfOllamaModelReady] =
+    useState<boolean>(false);
   const [processingStatus, setProcessingStatus] = useState<
     Record<string, DocumentStatus>
   >({});
@@ -90,13 +93,14 @@ export default function KnowledgePage() {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [nextStartPage, setNextStartPage] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [pagesPerLoad] = useState<number>(20); // 每次加载 20 页。
+  const [pagesPerLoad] = useState<number>(20);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const previewRequestTokenRef = useRef<number>(0);
   const initialPreviewAbortRef = useRef<AbortController | null>(null);
   const loadMoreAbortRef = useRef<AbortController | null>(null);
   const t = useT();
+  const locale = useSettingsStore((state) => state.locale);
   const tRef = useRef(t);
   const {
     apiKeys,
@@ -110,8 +114,6 @@ export default function KnowledgePage() {
   useEffect(() => {
     tRef.current = t;
   }, [t]);
-
-  // 选择合适的 embedding 提供商，不要盲目沿用聊天模型。
   const provider = SUPPORTED_MODELS.find((m) => m.id === model)?.provider || "openai";
   const isPdfPreview = viewingDoc?.file_type === ".pdf";
   const isMarkdownPreview = viewingDoc?.file_type === ".md";
@@ -122,8 +124,6 @@ export default function KnowledgePage() {
     currentProvider: provider,
     useLocalEmbedding,
   });
-
-  // Toast 辅助函数。
   const showToast = useCallback((type: Toast["type"], message: string) => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -134,7 +134,7 @@ export default function KnowledgePage() {
 
   const fetchDocuments = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/documents/`);
+      const response = await apiFetch(`/api/documents/`);
       if (response.ok) {
         const data = await response.json();
         setDocuments(data);
@@ -160,37 +160,31 @@ export default function KnowledgePage() {
     return () =>
       window.removeEventListener("knowledge-documents-updated", refreshDocuments);
   }, [fetchDocuments]);
-
-  // 检查本地 Ollama 状态。
   useEffect(() => {
-    const checkOllama = async () => {
+    const checkSelfOllama = async () => {
       try {
-        const response = await fetch("http://localhost:11434/api/tags", {
-          method: "GET",
-        });
+        const response = await apiFetch("/api/ollama/status");
         if (response.ok) {
           const data = await response.json();
-          const hasEmbeddingModel = data.models?.some((m: { name: string }) =>
-            m.name.includes("nomic-embed-text"),
-          );
-          setLocalOllamaStatus(hasEmbeddingModel);
+          setSelfOllamaServiceReady(Boolean(data.reachable));
+          setSelfOllamaModelReady(Boolean(data.model_available));
         } else {
-          setLocalOllamaStatus(false);
+          setSelfOllamaServiceReady(false);
+          setSelfOllamaModelReady(false);
         }
-      } catch {
-        setLocalOllamaStatus(false);
+      } catch (error) {
+        console.error("Failed to check Self-Ollama status:", error);
+        setSelfOllamaServiceReady(false);
+        setSelfOllamaModelReady(false);
       }
     };
-    checkOllama();
-    // 每 10 秒检查一次。
-    const interval = setInterval(checkOllama, 10000);
+    checkSelfOllama();
+    const interval = setInterval(checkSelfOllama, 10000);
     return () => clearInterval(interval);
   }, []);
-
-  // 获取文档的详细处理状态。
   const fetchProcessingStatus = useCallback(async (docId: string) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/documents/${docId}/status`,
       );
       if (response.ok) {
@@ -201,8 +195,6 @@ export default function KnowledgePage() {
       console.error("Failed to fetch processing status:", error);
     }
   }, []);
-
-  // 轮询处理状态并获取详细进度。
   useEffect(() => {
     const processingDocs = documents.filter((d) => d.status === "processing");
     if (processingDocs.length === 0) {
@@ -211,8 +203,6 @@ export default function KnowledgePage() {
       );
       return;
     }
-
-    // 为每个正在处理的文档获取详细状态。
     processingDocs.forEach((doc) => fetchProcessingStatus(doc.id));
 
     const interval = setInterval(() => {
@@ -233,8 +223,6 @@ export default function KnowledgePage() {
       );
       return;
     }
-
-    // 校验文件类型。
     const fileExt = file.name.split(".").pop()?.toLowerCase();
     const allowedTypes = ["pdf", "docx", "txt", "md"];
     if (!fileExt || !allowedTypes.includes(fileExt)) {
@@ -268,7 +256,7 @@ export default function KnowledgePage() {
         embeddingConfig.useLocalEmbedding.toString(),
       );
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/documents/upload?${params.toString()}`,
         {
           method: "POST",
@@ -298,7 +286,6 @@ export default function KnowledgePage() {
     } finally {
       setIsUploading(false);
       setUploadProgress("");
-      // 重置文件输入框。
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -314,8 +301,6 @@ export default function KnowledgePage() {
       await processFile(file);
     }
   };
-
-  // 拖拽处理函数。
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -346,7 +331,7 @@ export default function KnowledgePage() {
 
   const handleDownload = async (doc: Document) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/documents/${doc.id}/file`,
       );
       if (response.ok) {
@@ -371,7 +356,7 @@ export default function KnowledgePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/documents/${id}`, {
+      const response = await apiFetch(`/api/documents/${id}`, {
         method: "DELETE",
       });
 
@@ -411,7 +396,7 @@ export default function KnowledgePage() {
 
         let response: Response;
         try {
-          response = await fetch(
+          response = await apiFetch(
             `${API_BASE_URL}/api/documents/${doc.id}/preview-info`,
             { signal: controller.signal },
           );
@@ -469,7 +454,7 @@ export default function KnowledgePage() {
 
       let response: Response;
       try {
-        response = await fetch(
+        response = await apiFetch(
           `${API_BASE_URL}/api/documents/${doc.id}/content?${params.toString()}`,
           { signal: controller.signal },
         );
@@ -543,7 +528,7 @@ export default function KnowledgePage() {
 
       let response: Response;
       try {
-        response = await fetch(
+        response = await apiFetch(
           `${API_BASE_URL}/api/documents/${viewingDoc.id}/content?${params.toString()}`,
           { signal: controller.signal },
         );
@@ -671,8 +656,7 @@ export default function KnowledgePage() {
 
   return (
     <AppShell>
-      {/* Toast 通知 */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
+<div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -691,9 +675,7 @@ export default function KnowledgePage() {
           </div>
         ))}
       </div>
-
-      {/* 侧边栏 */}
-      <aside className="hidden">
+<aside className="hidden">
         <div className="p-4">
           <Link
             href="/chat"
@@ -719,12 +701,9 @@ export default function KnowledgePage() {
           </Link>
         </nav>
       </aside>
-
-      {/* 主内容 */}
-      <main className="flex-1 overflow-y-auto">
+<main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-          {/* 标题栏 */}
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("knowledgeTitle")}</h1>
               <p className="text-muted-foreground">{t("knowledgeSubtitle")}</p>
@@ -759,32 +738,38 @@ export default function KnowledgePage() {
               </Button>
             </div>
           </div>
-
-          {/* 本地 Embedding 开关 */}
           <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${localOllamaStatus ? "bg-emerald-500" : "bg-gray-400"}`}
+                className={`w-2 h-2 rounded-full ${
+                  selfOllamaServiceReady
+                    ? selfOllamaModelReady
+                      ? "bg-emerald-500"
+                      : "bg-amber-500"
+                    : "bg-gray-400"
+                }`}
               />
               <div>
                 <p className="text-sm font-medium">
                   {t("knowledgeUseLocalEmbedding")}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {localOllamaStatus
-                    ? t("knowledgeLocalEmbeddingDetected")
-                    : t("knowledgeLocalEmbeddingMissing")}
+                  {!selfOllamaServiceReady
+                    ? t("knowledgeLocalEmbeddingMissing")
+                    : selfOllamaModelReady
+                      ? t("knowledgeLocalEmbeddingDetected")
+                      : t("knowledgeSelfOllamaModelWillBePulled")}
                 </p>
               </div>
             </div>
             <button
               onClick={() => setUseLocalEmbedding(!useLocalEmbedding)}
-              disabled={!localOllamaStatus}
+              disabled={!selfOllamaServiceReady}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                useLocalEmbedding && localOllamaStatus
+                useLocalEmbedding && selfOllamaServiceReady
                   ? "bg-emerald-500"
                   : "bg-gray-200 dark:bg-gray-700"
-              } ${!localOllamaStatus ? "opacity-50 cursor-not-allowed" : ""}`}
+              } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -806,7 +791,9 @@ export default function KnowledgePage() {
                   </p>
                 </div>
                 <div className="text-xs text-blue-600 dark:text-blue-300">
-                  {t("knowledgeProcessing")} × {processingDocuments.length}
+                  {locale === "zh"
+                    ? `处理中：${processingDocuments.length}`
+                    : `Processing: ${processingDocuments.length}`}
                 </div>
               </div>
               <div className="space-y-3">
@@ -838,9 +825,7 @@ export default function KnowledgePage() {
               </div>
             </div>
           )}
-
-          {/* 拖拽上传区域 */}
-          <div
+<div
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
@@ -877,9 +862,7 @@ export default function KnowledgePage() {
               </>
             )}
           </div>
-
-          {/* 文档列表 */}
-          <div className="border border-border rounded-xl overflow-hidden">
+<div className="border border-border rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -912,17 +895,16 @@ export default function KnowledgePage() {
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{doc.title}</p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>
-                                {new Date(doc.created_at).toLocaleDateString()}
-                              </span>
-                              <span>·</span>
+                              <span>{doc.file_type.toUpperCase()}</span>
+                              <span>•</span>
+                              <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                              <span>•</span>
                               <span className="flex items-center gap-1">
                                 {getStatusIcon(doc.status)}
                                 {getStatusText(doc.status)}
                               </span>
                             </div>
-                            {/* 处理进度条 */}
-                            {doc.status === "processing" &&
+{doc.status === "processing" &&
                               processingStatus[doc.id]?.progress && (
                                 <div className="mt-2">
                                   <div className="flex items-center gap-2 text-xs">
@@ -1000,20 +982,17 @@ export default function KnowledgePage() {
           </div>
         </div>
       </main>
-
-      {/* 文档查看弹窗 */}
-      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
+<Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
           {viewingDoc && (
             <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-            {/* 弹窗头部 */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+<div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <h2 className="font-semibold">{viewingDoc.title}</h2>
                   <p className="text-xs text-muted-foreground">
-                    {viewingDoc.file_type.toUpperCase()} ·{" "}
+                    {viewingDoc.file_type.toUpperCase()} •{" "}
                     {new Date(viewingDoc.created_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -1025,22 +1004,15 @@ export default function KnowledgePage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-
-            {/* 文件信息栏 - 适用于大型 PDF */}
-            {docInfo.total_pages && (
+{docInfo.total_pages && (
               <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <FileDigit className="h-3.5 w-3.5" />
                   {t("knowledgeTotalPages", { count: docInfo.total_pages })}
                 </span>
-                {docInfo.file_size_mb && <span>{docInfo.file_size_mb} MB</span>}
+                {docInfo.file_size_mb && <span>•</span>}
                 {!isPdfPreview && (
-                  <span>
-                    {t("knowledgeLoadedPages", {
-                      current: Math.min(currentPage, docInfo.total_pages),
-                      total: docInfo.total_pages,
-                    })}
-                  </span>
+                  <span>•</span>
                 )}
                 {!isPdfPreview && currentPage < docInfo.total_pages && (
                   <span className="text-amber-500">
@@ -1049,9 +1021,7 @@ export default function KnowledgePage() {
                 )}
               </div>
             )}
-
-            {/* 弹窗内容 */}
-            <div
+<div
               ref={contentContainerRef}
               className="flex-1 overflow-y-auto p-6"
               onScroll={(e) => {
@@ -1151,8 +1121,7 @@ export default function KnowledgePage() {
                   <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
                     {docContent}
                   </pre>
-                  {/* 加载更多提示 */}
-                  {docInfo.total_pages && currentPage < docInfo.total_pages && (
+{docInfo.total_pages && currentPage < docInfo.total_pages && (
                     <div className="flex flex-col items-center justify-center py-6 gap-2">
                       {isLoadingMore ? (
                         <>
@@ -1174,11 +1143,8 @@ export default function KnowledgePage() {
                 </div>
               )}
             </div>
-
-            {/* 弹窗底部 */}
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
-              {/* PDF 页码导航 */}
-              {docInfo.total_pages &&
+<div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
+{docInfo.total_pages &&
                 docInfo.total_pages > 1 &&
                 !isPdfPreview && (
                   <div className="flex items-center gap-2">
@@ -1234,3 +1200,9 @@ export default function KnowledgePage() {
     </AppShell>
   );
 }
+
+
+
+
+
+

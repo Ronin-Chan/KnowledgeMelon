@@ -34,11 +34,18 @@ class DocumentService:
         self.upload_dir = upload_dir
         os.makedirs(upload_dir, exist_ok=True)
 
-    async def save_document(self, file_name: str, content: bytes) -> str:
+    async def save_document(
+        self,
+        file_name: str,
+        content: bytes,
+        owner_id: str | None = None,
+    ) -> str:
         """Save uploaded document and return file path"""
         file_id = str(uuid.uuid4())
         file_ext = os.path.splitext(file_name)[1].lower()
-        file_path = os.path.join(self.upload_dir, f"{file_id}{file_ext}")
+        target_dir = os.path.join(self.upload_dir, owner_id) if owner_id else self.upload_dir
+        os.makedirs(target_dir, exist_ok=True)
+        file_path = os.path.join(target_dir, f"{file_id}{file_ext}")
 
         with open(file_path, "wb") as f:
             f.write(content)
