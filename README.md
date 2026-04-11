@@ -1,6 +1,6 @@
 # KnowledgeMelon
 
-KnowledgeMelon is a local AI knowledge workspace for chatting with documents, storing long-term memories, and keeping a searchable knowledge base in one place.
+KnowledgeMelon is an AI knowledge workspace for chatting with documents, storing long-term memories, and keeping a searchable knowledge base in one place.
 
 ## What It Does
 
@@ -9,6 +9,7 @@ KnowledgeMelon is a local AI knowledge workspace for chatting with documents, st
 - Long-term memory capture and management
 - Multi-model support through the backend provider layer
 - Local-first setup with PostgreSQL and pgvector
+- Optional Ollama endpoint for embeddings
 
 ## Tech Stack
 
@@ -27,6 +28,7 @@ KnowledgeMelon is a local AI knowledge workspace for chatting with documents, st
 - SQLAlchemy async
 - PostgreSQL with pgvector
 - Python 3.13
+- Ollama integration for embeddings
 
 ### AI
 
@@ -57,50 +59,46 @@ KnowledgeMelon/
 
 ### Configure the Environment
 
-Create a `backend/.env` file if you need to override defaults:
+Create a `backend/.env` file:
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/knowledge_melon
 OPENAI_API_KEY=your_key_here
 APP_SECRET=your_secret_here
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+# Optional if your Ollama endpoint requires credentials:
+# OLLAMA_API_KEY=your_token_here
+# OLLAMA_USERNAME=your_username
+# OLLAMA_PASSWORD=your_password
 ```
 
-If you are not using Docker Compose, adjust `DATABASE_URL` to match your local PostgreSQL setup.
+Create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://your-backend-host:8000
+```
+
+You can also use your own Ollama server. Just update `OLLAMA_BASE_URL` in `backend/.env` to point to that server.
+
+An example `docker-compose.ollama.yml` is included for your information.
 
 ### Start the App
 
-Choose either one-click start or manual startup. You only need one of them.
+The simplest setup is:
 
-#### One-click start
-
-Run either of these from the repository root:
-
-- `.\start-dev.ps1`
-- `start-dev.bat`
-
-Pick one, and it will automatically start PostgreSQL, wait for the database to become healthy, then launch the backend and frontend. You do not need to start them manually.
-
-#### Start services manually
-
-If you prefer to run each service yourself:
-
-1. Start PostgreSQL
+1. Start the backend stack
 
 ```bash
 docker-compose up -d
 ```
 
-2. Run the backend
+This starts:
 
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
-```
+- `postgres`
+- `backend`
 
-3. Run the frontend
+2. Start the frontend
 
 ```bash
 cd frontend
@@ -108,30 +106,23 @@ npm install
 npm run dev
 ```
 
-### Local Ollama Embeddings (Optional)
+### Ollama Embeddings
 
-The Knowledge page can use local embeddings through Ollama
+The Knowledge page can use any Ollama endpoint configured in `backend/.env`.
 
 ### How It Works
 
-- The app checks `http://localhost:11434/api/tags` to detect a local Ollama instance.
-- If it finds a local embedding model, the `Use local embeddings` toggle becomes available in the Knowledge page.
-- The backend uses Ollama's embedding endpoint when `use_local_embedding` is enabled.
+- The frontend checks the backend's `/api/ollama/status` endpoint.
+- If the configured Ollama endpoint is reachable, the `Enable Self-Ollama` toggle becomes available in the Knowledge page.
+- If the embedding model is not present yet, the backend pulls it automatically the first time it is needed.
 
 ### Setup
 
-1. Install Ollama.
-2. Pull a local embedding model:
-
-```bash
-ollama pull nomic-embed-text
-```
-
-3. Make sure Ollama is running on `http://localhost:11434`.
-4. If needed, start it with `ollama serve`.
-5. Open the Knowledge page and enable `Use local embeddings`.
-
-Note: `start-dev.ps1` and `start-dev.bat` do not start Ollama for you. They only start PostgreSQL, the backend, and the frontend.
+1. Set `OLLAMA_BASE_URL` in `backend/.env` to the Ollama server you want to use.
+2. Add credentials if that endpoint requires them.
+3. Start the backend stack with Docker Compose.
+4. Open the Knowledge page.
+5. Enable `Self-Ollama` once the service is available.
 
 ## Useful Scripts
 
@@ -151,14 +142,6 @@ python main.py
 uvicorn main:app --reload
 ```
 
-### Root
-
-```powershell
-.\start-dev.ps1
-```
-
-Or run `start-dev.bat` on Windows.
-
 ## API Overview
 
 - `GET /` returns a basic service message
@@ -167,6 +150,7 @@ Or run `start-dev.bat` on Windows.
 - `/api/documents` manages the knowledge base
 - `/api/memories` manages memory records and settings
 - `/api/conversations` manages chat conversations
+- `/api/ollama/status` checks the configured Ollama endpoint
 
 ## Pages
 
@@ -179,4 +163,6 @@ Or run `start-dev.bat` on Windows.
 ## Notes
 
 - The frontend talks to the backend at `http://localhost:8000` by default.
-- If you change the backend host or port, set `NEXT_PUBLIC_API_URL` in the frontend environment.
+- Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` whenever the backend host or port is not the default `http://localhost:8000`.
+- The backend stack runs together on a single machine with Docker Compose, while the frontend can be deployed separately.
+- If you want a local Ollama server, use `docker-compose.ollama.yml`; if you host Ollama elsewhere, update `OLLAMA_BASE_URL` in `backend/.env` to point at it.

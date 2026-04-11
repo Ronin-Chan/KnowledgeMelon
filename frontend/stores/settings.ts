@@ -1,4 +1,4 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface ModelConfig {
@@ -21,15 +21,15 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     en: "OpenAI's latest flagship model, ideal for general complex tasks",
   },
   gpt_5_4_pro: {
-    zh: "更高精度版本，适合高难度推理与代码",
+    zh: "更高精度版本，适合高难度推理与代码任务",
     en: "Higher-precision version for demanding reasoning and coding",
   },
   gpt_5_mini: {
-    zh: "高性价比默认选择，速度与质量平衡",
+    zh: "高性价比默认选择，速度和质量更均衡",
     en: "A balanced default choice with strong speed-to-quality ratio",
   },
   gpt_5_nano: {
-    zh: "低延迟低成本，适合高吞吐轻任务",
+    zh: "低延迟、低成本，适合高吞吐轻量任务",
     en: "Low-latency, low-cost option for high-throughput lightweight tasks",
   },
   gpt_4_1: {
@@ -37,19 +37,19 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     en: "Mature and stable high-quality non-reasoning model",
   },
   claude_opus_4_6: {
-    zh: "Anthropic 最强模型，复杂任务与编码首选",
+    zh: "Anthropic 最强模型，适合复杂任务和编码",
     en: "Anthropic's strongest model for complex tasks and coding",
   },
   claude_sonnet_4_6: {
-    zh: "速度与智能均衡，通用生产默认",
+    zh: "速度和智能均衡，适合通用生产场景",
     en: "Balanced speed and intelligence for general production use",
   },
   claude_haiku_4_5: {
-    zh: "低成本快速响应，适合实时场景",
+    zh: "低成本、快速响应，适合实时场景",
     en: "Low-cost, fast responses for real-time scenarios",
   },
   gemini_3_1_pro_preview: {
-    zh: "Gemini 最新高阶推理与代理编程模型",
+    zh: "Gemini 最新高级推理与代理编程模型",
     en: "Gemini's latest advanced reasoning and agentic coding model",
   },
   gemini_3_flash_preview: {
@@ -57,7 +57,7 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     en: "Fast, cost-effective model in the Gemini 3 family",
   },
   gemini_3_1_flash_lite_preview: {
-    zh: "高并发低成本场景的轻量模型",
+    zh: "适合高并发、低成本场景的轻量模型",
     en: "Lightweight model for high-concurrency, low-cost scenarios",
   },
   deepseek_chat: {
@@ -81,7 +81,7 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     en: "Latest stable alias of Qwen-Plus",
   },
   qwen_flash: {
-    zh: "低延迟高并发模型",
+    zh: "低延迟、高并发模型",
     en: "Low-latency, high-concurrency model",
   },
   qwen3_coder_plus: {
@@ -93,7 +93,7 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     en: "Zhipu's latest flagship model",
   },
   glm_4_7: {
-    zh: "强化代码与Agent能力的生产模型",
+    zh: "强化代码和 Agent 能力的生产模型",
     en: "Production model strengthened for coding and agents",
   },
   glm_4_7_flash: {
@@ -101,7 +101,7 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     en: "Fast, low-cost model",
   },
   kimi_k2_5: {
-    zh: "Kimi 最新多模态主力模型",
+    zh: "Kimi 最新多模态旗舰模型",
     en: "Kimi's latest multimodal flagship model",
   },
   kimi_k2_turbo_preview: {
@@ -140,9 +140,7 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     zh: "快速经济",
     en: "Fast and economical",
   },
-};
-
-export const SUPPORTED_MODELS: ModelConfig[] = [
+};export const SUPPORTED_MODELS: ModelConfig[] = [
   {
     id: "gpt-5.4",
     name: "GPT-5.4",
@@ -222,8 +220,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     descriptionKey: "gemini_3_1_flash_lite_preview",
     contextWindow: 1000000,
   },
-
-  // DeepSeek 模型。
   {
     id: "deepseek-chat",
     name: "DeepSeek Chat",
@@ -238,8 +234,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     descriptionKey: "deepseek_reasoner",
     contextWindow: 128000,
   },
-
-  // 阿里云 - Qwen
   {
     id: "qwen3-max",
     name: "Qwen3-Max",
@@ -275,8 +269,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     descriptionKey: "qwen3_coder_plus",
     contextWindow: 1000000,
   },
-
-  // 智谱 - GLM
   {
     id: "glm-5",
     name: "GLM-5",
@@ -298,8 +290,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     descriptionKey: "glm_4_7_flash",
     contextWindow: 200000,
   },
-
-  // Moonshot 模型。
   {
     id: "kimi-k2.5",
     name: "Kimi K2.5",
@@ -335,8 +325,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     descriptionKey: "moonshot_v1_128k_legacy",
     contextWindow: 128000,
   },
-
-  // Cohere 模型。
   {
     id: "command-r",
     name: "Command R",
@@ -351,8 +339,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     descriptionKey: "command_r_plus",
     contextWindow: 128000,
   },
-
-  // Mistral 模型。
   {
     id: "mistral-large-latest",
     name: "Mistral Large",
@@ -450,24 +436,17 @@ interface ApiKeys {
 }
 
 interface SettingsStore {
-  // 旧版单一密钥（兼容旧数据）。
   openaiApiKey: string;
   model: string;
   theme: "light" | "dark";
   locale: "zh" | "en";
-
-  // 新的多提供商密钥。
   apiKeys: ApiKeys;
   baseUrls: { [provider: string]: string };
   selectedProvider: string;
-
-  // 功能开关（会持久化）。
   useRAG: boolean;
   useMemory: boolean;
   useTools: boolean;
   useLocalEmbedding: boolean;
-
-  // 操作。
   setOpenaiApiKey: (key: string) => void;
   setModel: (model: string) => void;
   setTheme: (theme: "light" | "dark") => void;
@@ -481,23 +460,26 @@ interface SettingsStore {
   setUseTools: (value: boolean) => void;
   setUseLocalEmbedding: (value: boolean) => void;
   getEffectiveApiKey: () => string;
+  replaceProviderSettings: (
+    payload: {
+      provider: string;
+      apiKey: string;
+      baseUrl?: string;
+    }[],
+  ) => void;
+  resetProviderSettings: () => void;
 }
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set, get) => ({
-      // 旧版。
       openaiApiKey: "",
       model: "gpt-5-mini",
-      theme: "light",
-      locale: "zh",
-
-      // 新版。
+      theme: "dark",
+      locale: "en",
       apiKeys: {},
       baseUrls: {},
       selectedProvider: "openai",
-
-      // 功能开关。
       useRAG: false,
       useMemory: false,
       useTools: false,
@@ -524,13 +506,29 @@ export const useSettingsStore = create<SettingsStore>()(
       setUseMemory: (value) => set({ useMemory: value }),
       setUseTools: (value) => set({ useTools: value }),
       setUseLocalEmbedding: (value) => set({ useLocalEmbedding: value }),
+      replaceProviderSettings: (payload) =>
+        set(() => ({
+          apiKeys: payload.reduce<Record<string, string>>((acc, item) => {
+            acc[item.provider] = item.apiKey;
+            return acc;
+          }, {}),
+          baseUrls: payload.reduce<Record<string, string>>((acc, item) => {
+            acc[item.provider] = item.baseUrl || "";
+            return acc;
+          }, {}),
+        })),
+      resetProviderSettings: () =>
+        set({
+          openaiApiKey: "",
+          apiKeys: {},
+          baseUrls: {},
+          selectedProvider: "openai",
+        }),
       getEffectiveApiKey: () => {
         const state = get();
         const provider = state.selectedProvider;
         const model = SUPPORTED_MODELS.find((m) => m.id === state.model);
         const modelProvider = model?.provider || provider;
-
-        // 尝试获取当前模型对应提供商的密钥。
         return (
           state.apiKeys[modelProvider] ||
           (modelProvider === "openai" ? state.openaiApiKey : "")
@@ -542,3 +540,6 @@ export const useSettingsStore = create<SettingsStore>()(
     },
   ),
 );
+
+
+

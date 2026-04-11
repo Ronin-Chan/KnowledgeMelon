@@ -181,6 +181,7 @@ class LLMService:
         model: str,
         base_url: Optional[str],
         session: Optional[AsyncSession],
+        user_id: Optional[str],
         use_rag: bool,
         use_memory: bool,
         attachments: Optional[List[Any]] = None,
@@ -194,13 +195,14 @@ class LLMService:
             "You are a helpful assistant. Answer clearly and accurately."
         ]
 
-        if use_rag and session and api_key:
+        if use_rag and session and api_key and user_id:
             # RAG：从知识库里取和当前问题最相关的文档片段。
             # 这里只是把检索结果拼进 prompt，不直接让模型“自己去查数据库”。
             rag_context = await rag_service.get_context_for_query(
                 query=message,
                 api_key=api_key,
                 session=session,
+                user_id=user_id,
                 provider=provider,
                 base_url=base_url,
             )
@@ -209,13 +211,14 @@ class LLMService:
                     "Relevant document context:\n" + rag_context.strip()
                 )
 
-        if use_memory and session and api_key:
+        if use_memory and session and api_key and user_id:
             # Memory：从长期记忆里取和当前问题相关的用户信息。
             # 它更像用户画像，而不是文档知识。
             memory_context = await memory_service.get_memory_context(
                 query=message,
                 api_key=api_key,
                 session=session,
+                user_id=user_id,
                 provider=provider,
                 base_url=base_url,
             )
@@ -250,6 +253,7 @@ class LLMService:
         base_url: Optional[str] = None,
         session: Optional[AsyncSession] = None,
         history: Optional[List[Any]] = None,
+        user_id: Optional[str] = None,
     ) -> AsyncIterable[str]:
         # 先把最终上下文拼好，再交给模型。
         # 这样上层只需要控制“开没开 RAG / Memory / Tools”，不用关心 prompt 细节。
@@ -260,6 +264,7 @@ class LLMService:
             model=model,
             base_url=base_url,
             session=session,
+            user_id=user_id,
             use_rag=use_rag,
             use_memory=use_memory,
             attachments=attachments,

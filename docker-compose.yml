@@ -1,6 +1,19 @@
-version: '3.8'
-
 services:
+  backend:
+    build:
+      context: ./backend
+    container_name: knowledge-melon-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/knowledge_melon
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: knowledge-melon-db

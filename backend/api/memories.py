@@ -1,16 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel
-from pydantic import Field
+from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.auth import get_current_user
 from core.database import get_session
-from models.database import Memory, MemorySetting
-from models.schemas import MemoryCreate, MemoryUpdate, MemoryResponse
+from models.api_schemas import MemoryCreate, MemoryUpdate
+from models.entities import MemorySetting, User
 from services.memory_service import memory_service
-from services.embedding_service import embedding_service
 
 router = APIRouter(prefix="/api/memories", tags=["memories"])
 
@@ -22,42 +22,36 @@ class MemorySettingsRequest(BaseModel):
     min_importance: int = 5
 
 
-async def get_memory_settings_from_db(session: AsyncSession) -> dict:
-    """从数据库读取记忆设置。"""
-    result = await session.execute(select(MemorySetting))
-    settings = {s.key: s.value for s in result.scalars().all()}
-
+async def get_memory_settings_from_db(session: AsyncSession, user_id) -> dict:
+    result = await session.execute(select(MemorySetting).where(MemorySetting.user_id == user_id))
+    settings = {item.key: item.value for item in result.scalars().all()}
     return {
         "auto_extract": settings.get("auto_extract", "true").lower() == "true",
         "whitelist_topics": settings.get("whitelist_topics", "").split(",") if settings.get("whitelist_topics") else [],
         "blacklist_topics": settings.get("blacklist_topics", "").split(",") if settings.get("blacklist_topics") else [],
-        "min_importance": int(settings.get("min_importance", "5"))
+        "min_importance": int(settings.get("min_importance", "5")),
     }
 
 
-async def save_memory_settings_to_db(session: AsyncSession, settings: dict):
-    """将记忆设置保存到数据库。"""
+async def save_memory_settings_to_db(session: AsyncSession, user_id, settings: dict):
     settings_map = {
         "auto_extract": str(settings.get("auto_extract", True)).lower(),
         "whitelist_topics": ",".join(settings.get("whitelist_topics", [])),
         "blacklist_topics": ",".join(settings.get("blacklist_topics", [])),
-        "min_importance": str(settings.get("min_importance", 5))
+        "min_importance": str(settings.get("min_importance", 5)),
     }
-
     for key, value in settings_map.items():
         result = await session.execute(
-            select(MemorySetting).where(MemorySetting.key == key)
+            select(MemorySetting).where(MemorySetting.user_id == user_id, MemorySetting.key == key)
         )
         setting = result.scalar_one_or_none()
-
         if setting:
             setting.value = value
             setting.updated_at = datetime.utcnow()
         else:
-            setting = MemorySetting(key=key, value=value)
-            session.add(setting)
-
+            session.add(MemorySetting(user_id=user_id, key=key, value=value))
     await session.commit()
+
 
 @router.post("/")
 async def create_memory(
@@ -65,51 +59,51 @@ async def create_memory(
     api_key: str = "",
     provider: str = "openai",
     base_url: str = "",
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """手动创建一条记忆。"""
     if not api_key:
         raise HTTPException(400, "API key required for embedding generation")
-
     memory = await memory_service.create_memory(
         content=data.content,
         api_key=api_key,
         session=session,
+        user_id=current_user.id,
         category=data.category,
         importance=data.importance,
         source="manual",
         provider=provider,
-        base_url=base_url if base_url else None
+        base_url=base_url if base_url else None,
     )
-    
     return {
         "id": str(memory.id),
         "content": memory.content,
         "category": memory.category,
         "importance": memory.importance,
-        "created_at": memory.created_at.isoformat()
+        "created_at": memory.created_at.isoformat(),
     }
+
 
 @router.get("/")
 async def list_memories(
     category: Optional[str] = None,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """列出所有记忆。"""
-    memories = await memory_service.list_memories(session, category)
-    
+    memories = await memory_service.list_memories(session, current_user.id, category)
     return [
         {
-            "id": str(m.id),
-            "content": m.content,
-            "category": m.category,
-            "importance": m.importance,
-            "source": m.source,
-            "created_at": m.created_at.isoformat(),
-            "access_count": m.access_count
+            "id": str(memory.id),
+            "content": memory.content,
+            "category": memory.category,
+            "importance": memory.importance,
+            "source": memory.source,
+            "created_at": memory.created_at.isoformat(),
+            "access_count": memory.access_count,
         }
-        for m in memories
+        for memory in memories
     ]
+
 
 @router.get("/search")
 async def search_memories(
@@ -118,128 +112,115 @@ async def search_memories(
     provider: str = "openai",
     base_url: str = "",
     limit: int = 5,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """按语义相似度搜索记忆。"""
     if not api_key:
         raise HTTPException(400, "API key required")
-
     memories = await memory_service.search_relevant_memories(
-        query, api_key, session, limit, provider, base_url if base_url else None
+        query,
+        api_key,
+        session,
+        current_user.id,
+        limit,
+        provider,
+        base_url if base_url else None,
     )
-
     return [
-        {
-            "id": str(m.id),
-            "content": m.content,
-            "category": m.category,
-            "importance": m.importance
-        }
-        for m in memories
+        {"id": str(memory.id), "content": memory.content, "category": memory.category, "importance": memory.importance}
+        for memory in memories
     ]
+
 
 @router.put("/{memory_id}")
 async def update_memory(
     memory_id: str,
     data: MemoryUpdate,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """更新一条记忆。"""
     memory = await memory_service.update_memory(
-        memory_id, session, content=data.content, importance=data.importance
+        memory_id,
+        session,
+        current_user.id,
+        content=data.content,
+        importance=data.importance,
     )
-    
     if not memory:
         raise HTTPException(404, "Memory not found")
-    
-    return {
-        "id": str(memory.id),
-        "content": memory.content,
-        "category": memory.category,
-        "importance": memory.importance
-    }
+    return {"id": str(memory.id), "content": memory.content, "category": memory.category, "importance": memory.importance}
+
 
 @router.delete("/{memory_id}")
 async def delete_memory(
     memory_id: str,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """删除一条记忆。"""
-    success = await memory_service.delete_memory(memory_id, session)
-    
+    success = await memory_service.delete_memory(memory_id, session, current_user.id)
     if not success:
         raise HTTPException(404, "Memory not found")
-    
     return {"message": "Memory deleted"}
+
 
 @router.post("/extract")
 async def extract_memories(
     conversation_text: str,
     api_key: str = "",
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """从对话文本中提取记忆。"""
     if not api_key:
         raise HTTPException(400, "API key required")
-
     memories = await memory_service.extract_memories_from_conversation(
-        conversation_text, api_key, session
+        conversation_text,
+        api_key,
+        session,
+        current_user.id,
     )
-
     return [
-        {
-            "id": str(m.id),
-            "content": m.content,
-            "category": m.category,
-            "importance": m.importance
-        }
-        for m in memories
+        {"id": str(memory.id), "content": memory.content, "category": memory.category, "importance": memory.importance}
+        for memory in memories
     ]
 
 
 @router.get("/settings")
 async def get_memory_settings(
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """获取记忆提取设置。"""
-    settings = await get_memory_settings_from_db(session)
-    return settings
+    return await get_memory_settings_from_db(session, current_user.id)
 
 
 @router.post("/settings")
 async def update_memory_settings(
     request: MemorySettingsRequest,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """更新记忆提取设置。"""
     settings = {
         "auto_extract": request.auto_extract,
         "whitelist_topics": request.whitelist_topics,
         "blacklist_topics": request.blacklist_topics,
-        "min_importance": request.min_importance
+        "min_importance": request.min_importance,
     }
-    await save_memory_settings_to_db(session, settings)
+    await save_memory_settings_to_db(session, current_user.id, settings)
     return {"success": True, "settings": settings}
 
 
 @router.get("/settings/check-topic")
 async def check_topic_allowed(
     topic: str,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """根据白名单和黑名单判断某个主题是否允许。"""
-    settings = await get_memory_settings_from_db(session)
-
-    # 先检查黑名单。
+    settings = await get_memory_settings_from_db(session, current_user.id)
     for blacklisted in settings["blacklist_topics"]:
         if blacklisted.lower() in topic.lower():
             return {"allowed": False, "reason": f"Topic matches blacklist: {blacklisted}"}
-
-    # 如果存在白名单，则主题必须至少命中一项。
     if settings["whitelist_topics"]:
         for whitelisted in settings["whitelist_topics"]:
             if whitelisted.lower() in topic.lower():
                 return {"allowed": True}
         return {"allowed": False, "reason": "Topic does not match any whitelist entry"}
-
     return {"allowed": True}
