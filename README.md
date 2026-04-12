@@ -48,7 +48,7 @@ The project focuses on a few practical goals:
 - SQLAlchemy async
 - PostgreSQL
 - pgvector
-- Python 3.13
+- Python 3.11
 - Pydantic v2
 - Uvicorn
 
@@ -93,7 +93,7 @@ KnowledgeMelon/
 #### Prerequisites
 
 - Node.js 20 or newer
-- Python 3.13 or newer
+- Python 3.11 or newer
 - Docker and Docker Compose
 
 #### 1. Configure the backend
@@ -196,7 +196,7 @@ KnowledgeMelon 是一个面向个人知识管理的 AI 工作台，核心目标�
 - SQLAlchemy 异步 ORM
 - PostgreSQL
 - pgvector
-- Python 3.13
+- Python 3.11
 - Pydantic v2
 - Uvicorn
 
@@ -241,7 +241,7 @@ KnowledgeMelon/
 #### 1. 准备环境
 
 - Node.js 20 或以上
-- Python 3.13 或以上
+- Python 3.11 或以上
 - Docker 和 Docker Compose
 
 #### 2. 配置后端
