@@ -1,10 +1,16 @@
+import csv
 import os
 import asyncio
 import tempfile
+import xml.etree.ElementTree as ET
 from typing import List
 from pypdf import PdfReader
 from docx import Document as DocxDocument
 import uuid
+
+from bs4 import BeautifulSoup
+
+from services.file_types import SUPPORTED_FILE_EXTENSION_SET
 
 try:
     import fitz
@@ -26,7 +32,39 @@ try:
 except ImportError:
     RapidOCR = None
 
+try:
+    from openpyxl import load_workbook
+except ImportError:
+    load_workbook = None
+
+try:
+    from pptx import Presentation
+except ImportError:
+    Presentation = None
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+try:
+    from striprtf.striprtf import rtf_to_text
+except ImportError:
+    rtf_to_text = None
+
+try:
+    import textract
+except ImportError:
+    textract = None
+
+try:
+    import xlrd
+except ImportError:
+    xlrd = None
+
 MEANINGFUL_TEXT_MIN_CHARS = 60
+MAX_TABLE_ROWS = 1000
+MAX_SHEET_ROWS = 1000
 
 
 class DocumentService:
@@ -63,10 +101,15 @@ class DocumentService:
 
         Args:
             file_path: Path to the document
-            file_type: File extension (.pdf, .docx, .txt, .md)
+            file_type: File extension
             start_page: For PDFs, start from this page (0-indexed, optional)
             end_page: For PDFs, end at this page (exclusive, optional)
         """
+        file_type = (file_type or "").lower()
+
+        if file_type not in SUPPORTED_FILE_EXTENSION_SET:
+            raise ValueError(f"Unsupported file type: {file_type}")
+
         if file_type == ".pdf":
             return await asyncio.to_thread(
                 self._parse_pdf,
@@ -76,7 +119,33 @@ class DocumentService:
             )
         elif file_type == ".docx":
             return await asyncio.to_thread(self._parse_docx, file_path)
-        elif file_type in [".txt", ".md"]:
+        elif file_type in [".doc", ".ppt"]:
+            return await asyncio.to_thread(self._parse_binary_with_textract, file_path)
+        elif file_type == ".pptx":
+            return await asyncio.to_thread(self._parse_pptx, file_path)
+        elif file_type == ".xlsx":
+            return await asyncio.to_thread(self._parse_xlsx, file_path)
+        elif file_type == ".xls":
+            return await asyncio.to_thread(self._parse_xls, file_path)
+        elif file_type == ".csv":
+            return await asyncio.to_thread(self._parse_csv, file_path, ",")
+        elif file_type == ".tsv":
+            return await asyncio.to_thread(self._parse_csv, file_path, "\t")
+        elif file_type == ".json":
+            return await asyncio.to_thread(self._parse_json, file_path)
+        elif file_type == ".xml":
+            return await asyncio.to_thread(self._parse_xml, file_path)
+        elif file_type in [".yaml", ".yml"]:
+            return await asyncio.to_thread(self._parse_yaml, file_path)
+        elif file_type in [".html", ".htm"]:
+            return await asyncio.to_thread(self._parse_html, file_path)
+        elif file_type == ".rtf":
+            return await asyncio.to_thread(self._parse_rtf, file_path)
+        elif file_type in [".log", ".srt", ".vtt"]:
+            return await asyncio.to_thread(self._parse_text, file_path)
+        elif file_type in [".png", ".jpg", ".jpeg", ".webp"]:
+            return await asyncio.to_thread(self._parse_image, file_path)
+        elif file_type in [".txt", ".md", ".py", ".js", ".ts", ".java", ".go"]:
             return await asyncio.to_thread(self._parse_text, file_path)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
@@ -289,8 +358,177 @@ class DocumentService:
             text += para.text + "\n"
         return text
 
+    def _parse_binary_with_textract(self, file_path: str) -> str:
+        if textract is None:
+            raise ValueError("Binary office files require textract to be installed")
+
+        output = textract.process(file_path)
+        if isinstance(output, bytes):
+            return output.decode("utf-8", errors="ignore")
+        return str(output or "")
+
+    def _parse_pptx(self, file_path: str) -> str:
+        if Presentation is None:
+            raise ValueError("PPTX parsing requires python-pptx to be installed")
+
+        prs = Presentation(file_path)
+        parts: list[str] = []
+        for slide_index, slide in enumerate(prs.slides, start=1):
+            slide_parts: list[str] = []
+            for shape in slide.shapes:
+                if getattr(shape, "has_text_frame", False):
+                    text = shape.text_frame.text.strip()
+                    if text:
+                        slide_parts.append(text)
+                if getattr(shape, "has_table", False):
+                    table_rows: list[list[str]] = []
+                    for row in shape.table.rows:
+                        table_rows.append([self._normalize_cell_value(cell.text) for cell in row.cells])
+                    if table_rows:
+                        slide_parts.append(self._format_table_rows(table_rows))
+            if slide_parts:
+                parts.append(f"--- Slide {slide_index} ---\n" + "\n".join(slide_parts))
+        return "\n\n".join(parts).strip()
+
+    def _parse_xlsx(self, file_path: str) -> str:
+        if load_workbook is None:
+            raise ValueError("XLSX parsing requires openpyxl to be installed")
+
+        workbook = load_workbook(file_path, read_only=True, data_only=True)
+        parts: list[str] = []
+        try:
+            for sheet in workbook.worksheets:
+                sheet_rows = []
+                for row_index, row in enumerate(sheet.iter_rows(values_only=True)):
+                    if row_index >= MAX_SHEET_ROWS:
+                        break
+                    sheet_rows.append([self._normalize_cell_value(cell) for cell in row])
+                if sheet_rows:
+                    parts.append(f"--- Sheet: {sheet.title} ---\n{self._format_table_rows(sheet_rows)}")
+        finally:
+            workbook.close()
+        return "\n\n".join(parts).strip()
+
+    def _parse_xls(self, file_path: str) -> str:
+        if xlrd is None:
+            raise ValueError("XLS parsing requires xlrd to be installed")
+
+        workbook = xlrd.open_workbook(file_path)
+        parts: list[str] = []
+        for sheet in workbook.sheets():
+            sheet_rows = []
+            for row_index in range(min(sheet.nrows, MAX_SHEET_ROWS)):
+                row = [
+                    self._normalize_cell_value(sheet.cell_value(row_index, col_index))
+                    for col_index in range(sheet.ncols)
+                ]
+                sheet_rows.append(row)
+            if sheet_rows:
+                parts.append(f"--- Sheet: {sheet.name} ---\n{self._format_table_rows(sheet_rows)}")
+        return "\n\n".join(parts).strip()
+
+    def _parse_csv(self, file_path: str, delimiter: str) -> str:
+        parts: list[str] = []
+        with open(file_path, "r", encoding="utf-8-sig", errors="ignore", newline="") as f:
+            reader = csv.reader(f, delimiter=delimiter)
+            for row_index, row in enumerate(reader):
+                if row_index >= MAX_TABLE_ROWS:
+                    break
+                parts.append("\t".join(cell.strip() for cell in row))
+        return "\n".join(parts).strip()
+
+    def _parse_json(self, file_path: str) -> str:
+        raw = self._parse_text(file_path)
+        try:
+            data = json.loads(raw)
+        except Exception:
+            return raw
+        return json.dumps(data, ensure_ascii=False, indent=2)
+
+    def _parse_xml(self, file_path: str) -> str:
+        raw = self._parse_text(file_path)
+        try:
+            root = ET.fromstring(raw)
+        except Exception:
+            return raw
+
+        parts: list[str] = []
+        for elem in root.iter():
+            text = " ".join((elem.text or "").split())
+            if text:
+                tag_name = elem.tag.split("}")[-1] if isinstance(elem.tag, str) else "node"
+                parts.append(f"{tag_name}: {text}")
+        return "\n".join(parts).strip() or raw
+
+    def _parse_yaml(self, file_path: str) -> str:
+        raw = self._parse_text(file_path)
+        if yaml is None:
+            return raw
+        try:
+            data = yaml.safe_load(raw)
+        except Exception:
+            return raw
+        return json.dumps(data, ensure_ascii=False, indent=2)
+
+    def _parse_html(self, file_path: str) -> str:
+        raw = self._parse_text(file_path)
+        soup = BeautifulSoup(raw, "html.parser")
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        text = soup.get_text("\n")
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        return "\n".join(lines)
+
+    def _parse_rtf(self, file_path: str) -> str:
+        raw = self._parse_text(file_path)
+        if rtf_to_text is None:
+            return raw
+        try:
+            return rtf_to_text(raw)
+        except Exception:
+            return raw
+
+    def _parse_image(self, file_path: str) -> str:
+        if RapidOCR is None:
+            raise ValueError("Image OCR requires rapidocr-onnxruntime to be installed")
+        ocr_engine = RapidOCR()
+        result, _ = ocr_engine(file_path)
+        if not result:
+            return ""
+        lines: list[str] = []
+        for item in result:
+            if isinstance(item, list) and len(item) >= 2:
+                text = str(item[1]).strip()
+                if text:
+                    lines.append(text)
+        return "\n".join(lines)
+
+    def _normalize_cell_value(self, value) -> str:
+        if value is None:
+            return ""
+        if hasattr(value, "text"):
+            return str(getattr(value, "text") or "").strip()
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value).strip()
+
+    def _format_table_rows(self, rows: list[list[str]]) -> str:
+        formatted_rows = []
+        for row in rows:
+            cleaned = [self._normalize_cell_value(cell) for cell in row]
+            if any(cleaned):
+                formatted_rows.append("\t".join(cleaned).rstrip())
+        return "\n".join(formatted_rows).strip()
+
     def _parse_text(self, file_path: str) -> str:
-        with open(file_path, "r", encoding="utf-8") as f:
+        encodings = ["utf-8-sig", "utf-8", "gb18030", "utf-16", "latin-1"]
+        for encoding in encodings:
+            try:
+                with open(file_path, "r", encoding=encoding, errors="strict") as f:
+                    return f.read()
+            except Exception:
+                continue
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             return f.read()
 
     def chunk_text(

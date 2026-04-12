@@ -15,6 +15,7 @@ from services.conversation_service import conversation_service
 from services.document_service import document_service
 from services.llm_service import llm_service
 from services.memory_service import memory_service
+from services.file_types import SUPPORTED_FILE_EXTENSIONS
 from services.tools_service import tools_service
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -55,9 +56,8 @@ async def _extract_memories_background(
 
 async def _parse_temporary_attachment(file: UploadFile) -> dict:
     file_ext = os.path.splitext(file.filename or "")[1].lower()
-    allowed_types = [".pdf", ".docx", ".txt", ".md"]
-    if file_ext not in allowed_types:
-        raise HTTPException(400, f"Unsupported file type. Allowed: {allowed_types}")
+    if file_ext not in SUPPORTED_FILE_EXTENSIONS:
+        raise HTTPException(400, f"Unsupported file type. Allowed: {SUPPORTED_FILE_EXTENSIONS}")
 
     content = await file.read()
     if not content:

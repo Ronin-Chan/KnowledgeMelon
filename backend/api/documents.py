@@ -14,6 +14,7 @@ from models.entities import Document, DocumentChunk, User
 from services.document_processor import document_processor
 from services.document_service import document_service
 from services.embedding_service import embedding_service
+from services.file_types import SUPPORTED_FILE_EXTENSIONS
 from services.rag_service import rag_service
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -131,9 +132,8 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
 ):
     file_ext = os.path.splitext(file.filename)[1].lower()
-    allowed_types = [".pdf", ".docx", ".txt", ".md"]
-    if file_ext not in allowed_types:
-        raise HTTPException(400, f"Unsupported file type. Allowed: {allowed_types}")
+    if file_ext not in SUPPORTED_FILE_EXTENSIONS:
+        raise HTTPException(400, f"Unsupported file type. Allowed: {SUPPORTED_FILE_EXTENSIONS}")
     if not use_local_embedding and not api_key:
         raise HTTPException(400, f"API key required for {provider} embedding generation")
 

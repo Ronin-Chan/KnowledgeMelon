@@ -53,6 +53,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { apiFetch, API_BASE_URL } from "@/lib/api";
+import {
+    SUPPORTED_FILE_ACCEPT,
+    SUPPORTED_FILE_EXTENSIONS,
+    SUPPORTED_FILE_LABEL,
+} from "@/lib/file-types";
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import Link from "next/link";
@@ -462,11 +467,10 @@ export default function ChatPage() {
 
     const parseTemporaryAttachment = async (file: File) => {
         const fileExt = file.name.split(".").pop()?.toLowerCase();
-        const allowedTypes = ["pdf", "docx", "txt", "md"];
-        if (!fileExt || !allowedTypes.includes(fileExt)) {
+        if (!fileExt || !SUPPORTED_FILE_EXTENSIONS.includes(fileExt as (typeof SUPPORTED_FILE_EXTENSIONS)[number])) {
             setErrorMessage(
                 t("chatUploadUnsupportedFileType", {
-                    types: allowedTypes.join(", "),
+                    types: SUPPORTED_FILE_LABEL,
                 }),
             );
             return;
@@ -519,13 +523,13 @@ export default function ChatPage() {
     const attachFilesToCurrentSession = async (files: File[]) => {
         const validFiles = files.filter((file) => {
             const fileExt = file.name.split(".").pop()?.toLowerCase();
-            return fileExt && ["pdf", "docx", "txt", "md"].includes(fileExt);
+            return fileExt && SUPPORTED_FILE_EXTENSIONS.includes(fileExt as (typeof SUPPORTED_FILE_EXTENSIONS)[number]);
         });
 
         if (validFiles.length === 0) {
             setErrorMessage(
                 t("chatUploadUnsupportedFileType", {
-                    types: ["pdf", "docx", "txt", "md"].join(", "),
+                    types: SUPPORTED_FILE_LABEL,
                 }),
             );
             return;
@@ -604,11 +608,10 @@ export default function ChatPage() {
         }
 
         const fileExt = file.name.split(".").pop()?.toLowerCase();
-        const allowedTypes = ["pdf", "docx", "txt", "md"];
-        if (!fileExt || !allowedTypes.includes(fileExt)) {
+        if (!fileExt || !SUPPORTED_FILE_EXTENSIONS.includes(fileExt as (typeof SUPPORTED_FILE_EXTENSIONS)[number])) {
             setErrorMessage(
                 t("chatUploadUnsupportedFileType", {
-                    types: allowedTypes.join(", "),
+                    types: SUPPORTED_FILE_LABEL,
                 }),
             );
             return;
@@ -1658,7 +1661,7 @@ export default function ChatPage() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept=".pdf,.docx,.txt,.md"
+                                accept={SUPPORTED_FILE_ACCEPT}
                                 multiple
                                 className="hidden"
                                 onChange={handleFileUpload}

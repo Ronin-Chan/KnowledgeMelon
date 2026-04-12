@@ -15,9 +15,16 @@ import {
   AlertCircle,
   Eye,
   FileDigit,
+  FileCode2,
+  Image as ImageIcon,
   Download,
 } from "lucide-react";
 import { apiFetch, API_BASE_URL } from "@/lib/api";
+import {
+  SUPPORTED_FILE_ACCEPT,
+  SUPPORTED_FILE_EXTENSIONS,
+  SUPPORTED_FILE_LABEL,
+} from "@/lib/file-types";
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
@@ -224,12 +231,11 @@ export default function KnowledgePage() {
       return;
     }
     const fileExt = file.name.split(".").pop()?.toLowerCase();
-    const allowedTypes = ["pdf", "docx", "txt", "md"];
-    if (!fileExt || !allowedTypes.includes(fileExt)) {
+    if (!fileExt || !SUPPORTED_FILE_EXTENSIONS.includes(fileExt as (typeof SUPPORTED_FILE_EXTENSIONS)[number])) {
       showToast(
         "error",
         t("knowledgeUnsupportedFileType", {
-          types: allowedTypes.join(", "),
+          types: SUPPORTED_FILE_LABEL,
         }),
       );
       return;
@@ -652,6 +658,117 @@ export default function KnowledgePage() {
         return status;
     }
   };
+
+  const getDocumentTypeIcon = (fileType: string) => {
+    const normalizedType = fileType.toLowerCase();
+    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
+      return ImageIcon;
+    }
+    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
+      return FileDigit;
+    }
+    if ([".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
+      return FileCode2;
+    }
+    return FileText;
+  };
+
+  const getDocumentTypeLabel = (fileType: string) => {
+    const normalizedType = fileType.toLowerCase();
+    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
+      return locale === "zh" ? "截图" : "Image";
+    }
+    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
+      return locale === "zh" ? "表格" : "Spreadsheet";
+    }
+    if ([".py", ".js", ".ts", ".java", ".go"].includes(normalizedType)) {
+      return locale === "zh" ? "代码" : "Code";
+    }
+    if ([".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
+      return locale === "zh" ? "结构化/日志" : "Structured";
+    }
+    if ([".doc", ".docx", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".html", ".htm", ".rtf"].includes(normalizedType)) {
+      return locale === "zh" ? "文档" : "Document";
+    }
+    return normalizedType.replace(".", "").toUpperCase();
+  };
+
+  const getDocumentTypeBadgeClassName = (fileType: string) => {
+    const normalizedType = fileType.toLowerCase();
+    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
+      return "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300";
+    }
+    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300";
+    }
+    if ([".py", ".js", ".ts", ".java", ".go"].includes(normalizedType)) {
+      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300";
+    }
+    if ([".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
+      return "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300";
+    }
+    if ([".doc", ".docx", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".html", ".htm", ".rtf"].includes(normalizedType)) {
+      return "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300";
+    }
+    return "bg-muted text-muted-foreground";
+  };
+
+  const getDocumentTypeTheme = (fileType: string) => {
+    const normalizedType = fileType.toLowerCase();
+    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
+      return {
+        iconBg: "bg-fuchsia-100 dark:bg-fuchsia-950/50",
+        iconText: "text-fuchsia-700 dark:text-fuchsia-300",
+        panelBg: "bg-fuchsia-50/70 dark:bg-fuchsia-950/20",
+        panelBorder: "border-fuchsia-200 dark:border-fuchsia-900",
+        progressBar: "bg-fuchsia-500",
+      };
+    }
+    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
+      return {
+        iconBg: "bg-emerald-100 dark:bg-emerald-950/50",
+        iconText: "text-emerald-700 dark:text-emerald-300",
+        panelBg: "bg-emerald-50/70 dark:bg-emerald-950/20",
+        panelBorder: "border-emerald-200 dark:border-emerald-900",
+        progressBar: "bg-emerald-500",
+      };
+    }
+    if ([".py", ".js", ".ts", ".java", ".go"].includes(normalizedType)) {
+      return {
+        iconBg: "bg-indigo-100 dark:bg-indigo-950/50",
+        iconText: "text-indigo-700 dark:text-indigo-300",
+        panelBg: "bg-indigo-50/70 dark:bg-indigo-950/20",
+        panelBorder: "border-indigo-200 dark:border-indigo-900",
+        progressBar: "bg-indigo-500",
+      };
+    }
+    if ([".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
+      return {
+        iconBg: "bg-amber-100 dark:bg-amber-950/50",
+        iconText: "text-amber-700 dark:text-amber-300",
+        panelBg: "bg-amber-50/70 dark:bg-amber-950/20",
+        panelBorder: "border-amber-200 dark:border-amber-900",
+        progressBar: "bg-amber-500",
+      };
+    }
+    if ([".doc", ".docx", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".html", ".htm", ".rtf"].includes(normalizedType)) {
+      return {
+        iconBg: "bg-sky-100 dark:bg-sky-950/50",
+        iconText: "text-sky-700 dark:text-sky-300",
+        panelBg: "bg-sky-50/70 dark:bg-sky-950/20",
+        panelBorder: "border-sky-200 dark:border-sky-900",
+        progressBar: "bg-sky-500",
+      };
+    }
+    return {
+      iconBg: "bg-muted",
+      iconText: "text-muted-foreground",
+      panelBg: "bg-white/70 dark:bg-muted/20",
+      panelBorder: "border-border",
+      progressBar: "bg-blue-500",
+    };
+  };
+
   const processingDocuments = documents.filter((doc) => doc.status === "processing");
 
   return (
@@ -713,7 +830,7 @@ export default function KnowledgePage() {
               <input
                 type="file"
                 ref={fileInputRef}
-                accept=".pdf,.docx,.txt,.md"
+                accept={SUPPORTED_FILE_ACCEPT}
                 multiple
                 onChange={handleFileUpload}
                 className="hidden"
@@ -800,23 +917,27 @@ export default function KnowledgePage() {
                 {processingDocuments.map((doc) => {
                   const progress = processingStatus[doc.id]?.progress;
                   const message = processingStatus[doc.id]?.progress?.message;
+                  const theme = getDocumentTypeTheme(doc.file_type);
                   return (
-                    <div key={doc.id} className="rounded-lg bg-white/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-3 py-2">
+                    <div
+                      key={doc.id}
+                      className={`rounded-lg border px-3 py-2 ${theme.panelBg} ${theme.panelBorder}`}
+                    >
                       <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className="truncate font-medium text-blue-900 dark:text-blue-100">
+                        <span className={`truncate font-medium ${theme.iconText}`}>
                           {doc.title}
                         </span>
-                        <span className="shrink-0 text-xs text-blue-700 dark:text-blue-300">
+                        <span className={`shrink-0 text-xs ${theme.iconText}`}>
                           {progress?.percent ?? 0}%
                         </span>
                       </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
+                      <div className={`mt-2 h-2 overflow-hidden rounded-full ${theme.panelBg}`}>
                         <div
-                          className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                          className={`h-full rounded-full transition-all duration-300 ${theme.progressBar}`}
                           style={{ width: `${progress?.percent ?? 0}%` }}
                         />
                       </div>
-                      <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">
+                      <p className={`mt-2 text-xs ${theme.iconText} opacity-80`}>
                         {message || t("knowledgeLoadingDocumentContent")}
                       </p>
                     </div>
@@ -880,103 +1001,107 @@ export default function KnowledgePage() {
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {documents.map((doc) =>
-                  (() => {
-                    const canPreview = doc.status !== "failed";
-                    return (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{doc.title}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{doc.file_type.toUpperCase()}</span>
-                              <span>•</span>
-                              <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                {getStatusIcon(doc.status)}
-                                {getStatusText(doc.status)}
-                              </span>
-                            </div>
-{doc.status === "processing" &&
-                              processingStatus[doc.id]?.progress && (
-                                <div className="mt-2">
-                                  <div className="flex items-center gap-2 text-xs">
-                                    <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                      <div
-                                        className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                                        style={{
-                                          width: `${processingStatus[doc.id].progress!.percent}%`,
-                                        }}
-                                      />
-                                    </div>
-                                    <span className="text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                                      {
-                                        processingStatus[doc.id].progress!
-                                          .percent
-                                      }
-                                      %
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {processingStatus[doc.id].progress!.message}
-                                  </p>
-                                </div>
-                              )}
-                          </div>
+                {documents.map((doc) => {
+                  const canPreview = doc.status !== "failed";
+                  const DocumentIcon = getDocumentTypeIcon(doc.file_type);
+                  const theme = getDocumentTypeTheme(doc.file_type);
+                  return (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${theme.iconBg}`}
+                        >
+                          <DocumentIcon className={`h-5 w-5 ${theme.iconText}`} />
                         </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(doc);
-                            }}
-                            className="p-2 hover:bg-emerald-500/10 hover:text-emerald-600 rounded-lg transition-colors"
-                            title={t("knowledgeDownloadOriginal")}
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!canPreview) return;
-                              handleViewDocument(doc);
-                            }}
-                            disabled={!canPreview}
-                            className={`p-2 rounded-lg transition-colors ${
-                              canPreview
-                                ? "hover:bg-primary/10 hover:text-primary"
-                                : "opacity-40 cursor-not-allowed"
-                            }`}
-                            title={
-                              canPreview
-                                ? t("knowledgeViewParsed")
-                                : t("knowledgePreviewUnavailable")
-                            }
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPendingDeleteId(doc.id);
-                            }}
-                            className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
-                            title={t("knowledgeDelete")}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{doc.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium ${getDocumentTypeBadgeClassName(doc.file_type)}`}
+                            >
+                              {getDocumentTypeLabel(doc.file_type)}
+                            </span>
+                            <span>•</span>
+                            <span>{doc.file_type.toUpperCase()}</span>
+                            <span>•</span>
+                            <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(doc.status)}
+                              {getStatusText(doc.status)}
+                            </span>
+                          </div>
+                          {doc.status === "processing" &&
+                            processingStatus[doc.id]?.progress && (
+                              <div className="mt-2">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                      style={{
+                                        width: `${processingStatus[doc.id].progress!.percent}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                                    {processingStatus[doc.id].progress!.percent}%
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {processingStatus[doc.id].progress!.message}
+                                </p>
+                              </div>
+                            )}
                         </div>
                       </div>
-                    );
-                  })(),
-                )}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(doc);
+                          }}
+                          className="p-2 hover:bg-emerald-500/10 hover:text-emerald-600 rounded-lg transition-colors"
+                          title={t("knowledgeDownloadOriginal")}
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!canPreview) return;
+                            handleViewDocument(doc);
+                          }}
+                          disabled={!canPreview}
+                          className={`p-2 rounded-lg transition-colors ${
+                            canPreview
+                              ? "hover:bg-primary/10 hover:text-primary"
+                              : "opacity-40 cursor-not-allowed"
+                          }`}
+                          title={
+                            canPreview
+                              ? t("knowledgeViewParsed")
+                              : t("knowledgePreviewUnavailable")
+                          }
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPendingDeleteId(doc.id);
+                          }}
+                          className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+                          title={t("knowledgeDelete")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -986,42 +1111,54 @@ export default function KnowledgePage() {
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
           {viewingDoc && (
             <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-<div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
+                    const theme = getDocumentTypeTheme(viewingDoc.file_type);
+                    return (
+                      <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme.iconBg}`}>
+                        <DocumentIcon className={`h-5 w-5 ${theme.iconText}`} />
+                      </div>
+                    );
+                  })()}
                 <div>
                   <h2 className="font-semibold">{viewingDoc.title}</h2>
                   <p className="text-xs text-muted-foreground">
+                    <span
+                      className={`mr-1 inline-flex items-center rounded-full px-2 py-0.5 font-medium ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
+                    >
+                      {getDocumentTypeLabel(viewingDoc.file_type)}
+                    </span>
+                    •{" "}
                     {viewingDoc.file_type.toUpperCase()} •{" "}
                     {new Date(viewingDoc.created_at).toLocaleDateString()}
                   </p>
                 </div>
+                </div>
+                <button
+                  onClick={closeViewModal}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={closeViewModal}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-{docInfo.total_pages && (
-              <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <FileDigit className="h-3.5 w-3.5" />
-                  {t("knowledgeTotalPages", { count: docInfo.total_pages })}
-                </span>
-                {docInfo.file_size_mb && <span>•</span>}
-                {!isPdfPreview && (
-                  <span>•</span>
-                )}
-                {!isPdfPreview && currentPage < docInfo.total_pages && (
-                  <span className="text-amber-500">
-                    ({t("knowledgeScrollForMore")})
+              {docInfo.total_pages && (
+                <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <FileDigit className="h-3.5 w-3.5" />
+                    {t("knowledgeTotalPages", { count: docInfo.total_pages })}
                   </span>
-                )}
-              </div>
-            )}
-<div
+                  {docInfo.file_size_mb && <span>•</span>}
+                  {!isPdfPreview && <span>•</span>}
+                  {!isPdfPreview && currentPage < docInfo.total_pages && (
+                    <span className="text-amber-500">
+                      ({t("knowledgeScrollForMore")})
+                    </span>
+                  )}
+                </div>
+              )}
+              <div
               ref={contentContainerRef}
               className="flex-1 overflow-y-auto p-6"
               onScroll={(e) => {
@@ -1121,7 +1258,7 @@ export default function KnowledgePage() {
                   <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
                     {docContent}
                   </pre>
-{docInfo.total_pages && currentPage < docInfo.total_pages && (
+                  {docInfo.total_pages && currentPage < docInfo.total_pages && (
                     <div className="flex flex-col items-center justify-center py-6 gap-2">
                       {isLoadingMore ? (
                         <>
@@ -1143,8 +1280,8 @@ export default function KnowledgePage() {
                 </div>
               )}
             </div>
-<div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
-{docInfo.total_pages &&
+              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
+                {docInfo.total_pages &&
                 docInfo.total_pages > 1 &&
                 !isPdfPreview && (
                   <div className="flex items-center gap-2">
@@ -1156,15 +1293,15 @@ export default function KnowledgePage() {
                     </span>
                   </div>
                 )}
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  onClick={closeViewModal}
-                  className="px-4 py-2 rounded-lg bg-background border border-border hover:bg-muted transition-colors text-sm font-medium"
-                >
-                  {t("knowledgeClose")}
-                </button>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    onClick={closeViewModal}
+                    className="px-4 py-2 rounded-lg bg-background border border-border hover:bg-muted transition-colors text-sm font-medium"
+                  >
+                    {t("knowledgeClose")}
+                  </button>
+                </div>
               </div>
-            </div>
             </div>
           )}
         </DialogContent>
