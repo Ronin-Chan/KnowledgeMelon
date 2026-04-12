@@ -79,28 +79,28 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={toggleLocale}
-        className="absolute right-4 top-4 z-20 rounded-full border border-border bg-card px-3 py-2 text-sm shadow-sm"
+        className="absolute right-4 top-4 z-20 rounded-full bg-background px-3 py-2 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
       >
-        {locale === "zh" ? "EN" : "中文"}
+        {locale === "zh" ? "English" : "中文"}
       </button>
 
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl items-center justify-center sm:min-h-[calc(100vh-5rem)]">
-        <Card className="grid w-full max-w-4xl overflow-hidden border border-border/70 bg-card/95 shadow-2xl backdrop-blur md:grid-cols-[1.1fr_0.9fr]">
-          <div className="bg-[linear-gradient(160deg,hsl(221_39%_11%)_0%,hsl(223_47%_8%)_100%)] px-6 py-8 text-white sm:px-8 sm:py-10 md:px-10 md:py-12 dark:bg-[linear-gradient(160deg,hsl(160_40%_12%)_0%,hsl(220_35%_8%)_100%)]">
-            <div className="text-sm uppercase tracking-[0.3em] text-emerald-300/90">
+        <Card className="grid w-full max-w-4xl overflow-hidden bg-card md:grid-cols-[1.05fr_0.95fr]">
+          <div className="bg-foreground px-6 py-8 text-background sm:px-8 sm:py-10 md:px-10 md:py-12">
+            <div className="text-sm uppercase tracking-[0.3em] text-background/70">
               Knowledge Melon
             </div>
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="mt-6 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
               {locale === "zh" ? "欢迎回来" : "Welcome back"}
             </h1>
-            <p className="mt-4 max-w-md text-sm leading-7 text-slate-300/95">
+            <p className="mt-4 max-w-md text-sm leading-7 text-background/75">
               {locale === "zh"
                 ? "登录后可访问你的对话、知识库、记忆，以及可选的加密服务器端 API Key 同步。"
                 : "Log in to access your conversations, knowledge base, memories, and optional encrypted server-side API key sync."}
             </p>
           </div>
 
-          <div className="bg-card/90 px-6 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
+          <div className="px-6 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label className="text-foreground/85" htmlFor="email">
@@ -131,7 +131,7 @@ export default function LoginPage() {
                 />
               </div>
               {error && (
-                <div className="rounded-xl border border-red-300/40 bg-red-500/8 px-3 py-2 text-sm text-red-600 dark:text-red-300">
+                <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:bg-red-950/30 dark:text-red-300">
                   {error}
                 </div>
               )}

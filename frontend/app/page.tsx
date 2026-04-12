@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { ArrowRight, BookOpen, Brain, MessageSquare, Sparkles } from "lucide-react";
+
 import { AppShell } from "@/components/app-shell";
+import { PageContainer, PageShell, PageSurface } from "@/components/page-shell";
 import { useT } from "@/lib/i18n";
 
 export default function Home() {
@@ -31,65 +33,85 @@ export default function Home() {
 
   return (
     <AppShell>
-      <div className="relative min-h-screen overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_36%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.12),transparent_28%),linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent)]" />
-        <div className="relative max-w-6xl mx-auto px-6 py-16 lg:py-24">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-4 py-2 text-sm text-muted-foreground backdrop-blur">
-              <Sparkles className="h-4 w-4 text-primary" />
-              {t("appName")}
-            </div>
+      <PageShell className="min-h-[calc(100vh-4rem)] dark:[background-image:none]">
+        <PageContainer className="flex min-h-[calc(100vh-4rem)] items-center py-10 lg:py-12">
+          <section className="grid w-full gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-muted/70 px-4 py-2 text-sm text-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.04)]">
+                <Sparkles className="h-4 w-4" />
+                {t("appName")}
+              </div>
 
-            <h1 className="mt-8 text-5xl font-semibold tracking-tight text-foreground lg:text-7xl">
-              {t("homeHero")}
-              <span className="block text-muted-foreground">
-                {t("homeHeroAccent")}
-              </span>
-            </h1>
+              <h1 className="mt-8 text-5xl font-semibold tracking-[-0.06em] text-foreground sm:text-6xl lg:text-7xl">
+                {t("homeHero")}
+                <span className="block text-muted-foreground">
+                  {t("homeHeroAccent")}
+                </span>
+              </h1>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-              {t("homeDescription")}
-            </p>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground sm:text-xl">
+                {t("homeDescription")}
+              </p>
 
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Link
-                href="/chat"
-                className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-              >
-                {t("startChat")}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/knowledge"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sidebar-accent"
-              >
-                {t("viewKnowledge")}
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-16 grid gap-4 md:grid-cols-3">
-            {highlights.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href} className="group">
-                  <div className="h-full rounded-3xl border border-border bg-card/85 p-6 shadow-sm backdrop-blur transition-all hover:-translate-y-1 hover:shadow-xl">
-                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
+              <div className="mt-10 flex flex-wrap gap-3">
+                <Link
+                  href="/chat"
+                  className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background shadow-[0_0_0_1px_rgba(0,0,0,0.08)] transition-opacity hover:opacity-90"
+                >
+                  {t("startChat")}
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+                <Link
+                  href="/knowledge"
+                  className="inline-flex items-center gap-2 rounded-full bg-background px-5 py-3 text-sm font-medium text-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.08)] transition-colors hover:bg-muted"
+                >
+                  {t("viewKnowledge")}
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <PageSurface className="overflow-hidden p-0">
+                <div className="border-b border-border/70 bg-muted/35 px-5 py-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                        Knowledge Melon
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+                        {t("homeHero")}
+                      </p>
+                    </div>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground text-background">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-3 p-5 sm:grid-cols-3">
+                  {highlights.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="rounded-2xl border border-border/70 bg-background p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-18px_rgba(0,0,0,0.35)]"
+                      >
+                        <Icon className="h-5 w-5 text-foreground" />
+                        <h3 className="mt-4 text-sm font-medium text-foreground">
+                          {item.title}
+                        </h3>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                          {item.description}
+                        </p>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </PageSurface>
+            </div>
+          </section>
+        </PageContainer>
+      </PageShell>
     </AppShell>
   );
 }

@@ -65,28 +65,28 @@ export default function RegisterPage() {
       <button
         type="button"
         onClick={toggleLocale}
-        className="absolute right-4 top-4 z-20 rounded-full border border-border bg-card px-3 py-2 text-sm shadow-sm"
+        className="absolute right-4 top-4 z-20 rounded-full bg-background px-3 py-2 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
       >
-        {locale === "zh" ? "EN" : "中文"}
+        {locale === "zh" ? "English" : "中文"}
       </button>
 
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl items-center justify-center sm:min-h-[calc(100vh-5rem)]">
-        <Card className="grid w-full max-w-4xl overflow-hidden border border-border/70 bg-card/95 shadow-2xl backdrop-blur md:grid-cols-[0.95fr_1.05fr]">
-          <div className="bg-[linear-gradient(160deg,hsl(40_92%_84%)_0%,hsl(30_100%_95%)_100%)] px-6 py-8 text-slate-900 sm:px-8 sm:py-10 md:px-10 md:py-12 dark:bg-[linear-gradient(160deg,hsl(32_42%_18%)_0%,hsl(220_30%_10%)_100%)] dark:text-amber-50">
-            <div className="text-sm uppercase tracking-[0.3em] text-amber-700 dark:text-amber-300/90">
+        <Card className="grid w-full max-w-4xl overflow-hidden bg-card md:grid-cols-[1fr_1.05fr]">
+          <div className="bg-foreground px-6 py-8 text-background sm:px-8 sm:py-10 md:px-10 md:py-12">
+            <div className="text-sm uppercase tracking-[0.3em] text-background/70">
               {locale === "zh" ? "个人工作区" : "Personal Workspace"}
             </div>
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="mt-6 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
               {locale === "zh" ? "创建你的账户" : "Create your account"}
             </h1>
-            <p className="mt-4 max-w-md text-sm leading-7 text-slate-700 dark:text-amber-50/80">
+            <p className="mt-4 max-w-md text-sm leading-7 text-background/75">
               {locale === "zh"
                 ? "每个账户都有独立的对话、知识库和记忆。API Key 默认保存在本地，如你选择，也可以同步到服务器。"
                 : "Each account gets its own isolated conversations, knowledge base, and memories. API keys stay local by default and can be synced to the server only if you choose."}
             </p>
           </div>
 
-          <div className="bg-card/90 px-6 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
+          <div className="px-6 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label className="text-foreground/85" htmlFor="username">
@@ -131,7 +131,7 @@ export default function RegisterPage() {
                 />
               </div>
               {error && (
-                <div className="rounded-xl border border-red-300/40 bg-red-500/8 px-3 py-2 text-sm text-red-600 dark:text-red-300">
+                <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:bg-red-950/30 dark:text-red-300">
                   {error}
                 </div>
               )}

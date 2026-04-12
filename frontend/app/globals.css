@@ -4,9 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 1rem;
-
-  /* 浅色模式 - ChatGPT 风格 */
+  --radius: 0.875rem;
   --background: 0 0% 100%;
   --foreground: 0 0% 9%;
   --card: 0 0% 100%;
@@ -17,30 +15,29 @@
   --primary-foreground: 0 0% 98%;
   --secondary: 0 0% 96%;
   --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
+  --muted: 0 0% 97%;
+  --muted-foreground: 0 0% 40%;
   --accent: 0 0% 96%;
   --accent-foreground: 0 0% 9%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 0 0% 64%;
-  --chart-1: 0 0% 9%;
-  --chart-2: 0 0% 45%;
-  --chart-3: 0 0% 64%;
-  --chart-4: 0 0% 90%;
-  --chart-5: 0 0% 96%;
-
-  /* 侧边栏 */
-  --sidebar-background: 0 0% 98%;
+  --border: 0 0% 92%;
+  --input: 0 0% 92%;
+  --ring: 212 100% 48%;
+  --chart-1: 212 100% 48%;
+  --chart-2: 270 75% 56%;
+  --chart-3: 329 82% 54%;
+  --chart-4: 0 0% 72%;
+  --chart-5: 0 0% 90%;
+  --sidebar-background: 0 0% 99%;
   --sidebar-foreground: 0 0% 9%;
-  --sidebar-border: 0 0% 90%;
-  --sidebar-accent: 0 0% 94%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-accent: 0 0% 95%;
+  --focus-ring: hsla(212, 100%, 48%, 1);
 }
 
 .dark {
-  --background: 0 0% 9%;
+  --background: 0 0% 7%;
   --foreground: 0 0% 98%;
   --card: 0 0% 9%;
   --card-foreground: 0 0% 98%;
@@ -58,7 +55,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 0 0% 18%;
   --input: 0 0% 18%;
-  --ring: 0 0% 45%;
+  --ring: 212 100% 58%;
   --sidebar-background: 0 0% 6%;
   --sidebar-foreground: 0 0% 98%;
   --sidebar-border: 0 0% 18%;
@@ -85,10 +82,10 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 0.25rem);
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
@@ -104,19 +101,26 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
+
   html {
     scroll-behavior: smooth;
   }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "liga" 1, "rlig" 1, "calt" 1;
+    text-rendering: geometricPrecision;
+  }
+
+  :where(button, a, input, textarea, select, summary):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
 }
 
-/* 自定义滚动条 - 极简风格 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -124,15 +128,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.2);
-  border-radius: 3px;
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.18);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.4);
+  background: hsl(var(--muted-foreground) / 0.34);
 }
 
-/* 选中颜色 */
 ::selection {
-  background: hsl(var(--primary) / 0.15);
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--foreground));
 }

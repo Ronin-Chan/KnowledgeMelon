@@ -49,6 +49,7 @@ import {
 import { apiFetch, API_BASE_URL } from "@/lib/api";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { PageContainer, PageHeader, PageSurface } from "@/components/page-shell";
 import { useLocale, useT } from "@/lib/i18n";
 
 interface Memory {
@@ -353,17 +354,16 @@ export default function MemoriesPage() {
 
   return (
     <AppShell>
-<div className="fixed top-4 right-4 z-50 space-y-2">
+      <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
-              toast.type === "success"
+            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${toast.type === "success"
                 ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
                 : toast.type === "error"
                   ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
                   : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
-            }`}
+              }`}
           >
             {toast.type === "success" && <Check className="h-4 w-4" />}
             {toast.type === "error" && <AlertCircle className="h-4 w-4" />}
@@ -372,7 +372,7 @@ export default function MemoriesPage() {
           </div>
         ))}
       </div>
-<aside className="hidden">
+      <aside className="hidden">
         <div className="p-4">
           <Link
             href="/chat"
@@ -396,7 +396,7 @@ export default function MemoriesPage() {
           >
             {t("memoriesKnowledge")}
           </Link>
-            <Link
+          <Link
             href="/memories"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm bg-sidebar-accent text-foreground transition-colors cursor-pointer"
           >
@@ -411,27 +411,28 @@ export default function MemoriesPage() {
           </Link>
         </nav>
       </aside>
-<main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold mb-2">{t("memoriesTitle")}</h1>
-              <p className="text-muted-foreground">{t("memoriesSubtitle")}</p>
-            </div>
+      <main className="flex-1 overflow-y-auto">
+        <PageContainer>
+          <PageHeader
+            title={t("memoriesTitle")}
+            description={t("memoriesSubtitle")}
+            actions={
+              <>
+                <Button variant="outline" onClick={() => setShowSettings(true)}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  {t("memoriesExtractionSettings")}
+                </Button>
+                <Button onClick={() => setShowAddForm(!showAddForm)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("memoriesAddMemory")}
+                </Button>
+              </>
+            }
+          />
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button variant="outline" onClick={() => setShowSettings(true)}>
-                <Settings className="mr-2 h-4 w-4" />
-                {t("memoriesExtractionSettings")}
-              </Button>
-              <Button onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("memoriesAddMemory")}
-              </Button>
-            </div>
-          </div>
-<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="p-4 rounded-lg border border-border bg-card">
+          <div className="mt-8 space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <PageSurface className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-4 w-4 text-purple-500" />
                   <span className="text-sm font-medium">{t("memoriesAutoExtract")}</span>
@@ -439,43 +440,46 @@ export default function MemoriesPage() {
                 <p className="text-2xl font-semibold">
                   {settings.auto_extract ? t("memoriesAutoExtractOn") : t("memoriesAutoExtractOff")}
                 </p>
-              </div>
-              <div className="p-4 rounded-lg border border-border bg-card">
+              </PageSurface>
+              <PageSurface className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="h-4 w-4 text-emerald-500" />
                   <span className="text-sm font-medium">{t("memoriesWhitelistTopics")}</span>
                 </div>
-              <p className="text-2xl font-semibold">
-                {settings.whitelist_topics.length}
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-border bg-card">
+                <p className="text-2xl font-semibold">
+                  {settings.whitelist_topics.length}
+                </p>
+              </PageSurface>
+              <PageSurface className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Filter className="h-4 w-4 text-red-500" />
                   <span className="text-sm font-medium">{t("memoriesBlacklistTopics")}</span>
                 </div>
-              <p className="text-2xl font-semibold">
-                {settings.blacklist_topics.length}
-              </p>
+                <p className="text-2xl font-semibold">
+                  {settings.blacklist_topics.length}
+                </p>
+              </PageSurface>
             </div>
           </div>
-<div className="mb-6 flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("memoriesSearchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="pl-9"
-              />
+          <PageSurface className="mb-4 mt-4">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t("memoriesSearchPlaceholder")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="pl-9"
+                />
+              </div>
+              <Button variant="outline" className="sm:w-auto" onClick={handleSearch}>
+                {t("memoriesSearch")}
+              </Button>
             </div>
-            <Button variant="outline" className="sm:w-auto" onClick={handleSearch}>
-              {t("memoriesSearch")}
-            </Button>
-          </div>
-{showAddForm && (
-            <div className="border border-border rounded-xl p-6 mb-6">
+          </PageSurface>
+          {showAddForm && (
+            <PageSurface className="mb-6">
               <h3 className="font-medium mb-4">{t("memoriesAddNewTitle")}</h3>
               <div className="space-y-4">
                 <Textarea
@@ -528,9 +532,9 @@ export default function MemoriesPage() {
                   <Button onClick={handleAddMemory}>{t("memoriesAdd")}</Button>
                 </div>
               </div>
-            </div>
+            </PageSurface>
           )}
-<div className="border border-border rounded-xl overflow-hidden">
+          <PageSurface className="overflow-hidden p-0">
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -593,10 +597,10 @@ export default function MemoriesPage() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
+          </PageSurface>
+        </PageContainer>
       </main>
-<Dialog open={showSettings} onOpenChange={setShowSettings}>
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
@@ -607,192 +611,190 @@ export default function MemoriesPage() {
           </DialogHeader>
 
           <div className="space-y-6 py-2">
-<div className="flex items-center justify-between p-4 rounded-lg border border-border">
-                <div>
-                  <p className="font-medium">{t("memoriesAutoExtract")}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t("memoriesAutoExtractDescription")}
-                  </p>
-                </div>
-                <button
-                  onClick={() =>
-                    setSettings({
-                      ...settings,
-                      auto_extract: !settings.auto_extract,
-                    })
-                  }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.auto_extract
-                      ? "bg-emerald-500"
-                      : "bg-gray-200 dark:bg-gray-700"
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+              <div>
+                <p className="font-medium">{t("memoriesAutoExtract")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("memoriesAutoExtractDescription")}
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  setSettings({
+                    ...settings,
+                    auto_extract: !settings.auto_extract,
+                  })
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.auto_extract
+                    ? "bg-emerald-500"
+                    : "bg-gray-200 dark:bg-gray-700"
                   }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      settings.auto_extract ? "translate-x-6" : "translate-x-1"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.auto_extract ? "translate-x-6" : "translate-x-1"
                     }`}
-                  />
-                </button>
-              </div>
-              <div className="space-y-3">
-                <label className="font-medium">{t("memoriesMinImportance")}</label>
-                <p className="text-sm text-muted-foreground">
-                  {t("memoriesMinImportanceHint")}
-                </p>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={settings.min_importance}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        min_importance: parseInt(e.target.value),
-                      })
-                    }
-                    className="flex-1"
-                  />
-                  <span className="w-12 text-center font-medium">
-                    {settings.min_importance}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="font-medium">{t("memoriesTtlDays")}</label>
-                <p className="text-sm text-muted-foreground">
-                  {locale === "zh"
-                    ? "超过这个天数的记忆会被自动标记为过期。"
-                    : "Memories older than this many days will be marked as expired."}
-                </p>
-                <Input
-                  type="number"
-                  min={0}
-                  value={settings.memory_ttl_days}
+                />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <label className="font-medium">{t("memoriesMinImportance")}</label>
+              <p className="text-sm text-muted-foreground">
+                {t("memoriesMinImportanceHint")}
+              </p>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={settings.min_importance}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      memory_ttl_days: parseInt(e.target.value || "0"),
+                      min_importance: parseInt(e.target.value),
                     })
                   }
+                  className="flex-1"
                 />
-              </div>
-              <div className="space-y-3">
-                <label className="font-medium">{t("memoriesConflictPolicy")}</label>
-                <p className="text-sm text-muted-foreground">
-                  {locale === "zh"
-                    ? "当新的记忆和已有记忆冲突时，系统会按这个策略处理。"
-                    : "How the system should resolve conflicts with existing memories."}
-                </p>
-                <Select
-                  value={settings.memory_conflict_policy}
-                  onValueChange={(value) =>
-                    setSettings({
-                      ...settings,
-                      memory_conflict_policy: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("memoriesConflictPolicy")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latest_wins">{t("memoriesPolicyLatest")}</SelectItem>
-                    <SelectItem value="importance_wins">{t("memoriesPolicyImportance")}</SelectItem>
-                    <SelectItem value="merge">{t("memoriesPolicyMerge")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-3">
-                <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
-                <p className="text-sm text-muted-foreground">
-                  {t("memoriesWhitelistHint")}
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newWhitelistItem}
-                    onChange={(e) => setNewWhitelistItem(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addWhitelistItem();
-                    }}
-                    placeholder={t("memoriesAddTopic")}
-                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-background"
-                  />
-                  <Button onClick={addWhitelistItem} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {settings.whitelist_topics.map((item) => (
-                    <span
-                      key={item}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 text-sm"
-                    >
-                      {item}
-                      <button
-                        onClick={() => removeWhitelistItem(item)}
-                        className="hover:text-emerald-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-<div className="space-y-3">
-                <label className="font-medium">{t("memoriesBlacklistTopics")}</label>
-                <p className="text-sm text-muted-foreground">
-                  {t("memoriesBlacklistHint")}
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newBlacklistItem}
-                    onChange={(e) => setNewBlacklistItem(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addBlacklistItem();
-                    }}
-                    placeholder={t("memoriesAddTopic")}
-                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-background"
-                  />
-                  <Button onClick={addBlacklistItem} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {settings.blacklist_topics.map((item) => (
-                    <span
-                      key={item}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm"
-                    >
-                      {item}
-                      <button
-                        onClick={() => removeBlacklistItem(item)}
-                        className="hover:text-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                <span className="w-12 text-center font-medium">
+                  {settings.min_importance}
+                </span>
               </div>
             </div>
-<div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
-              <Button variant="outline" onClick={() => setShowSettings(false)}>
-                {t("memoriesCancel")}
-              </Button>
-              <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
-                {isSavingSettings ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("memoriesSaving")}
-                  </>
-                ) : (
-                  t("memoriesSave")
-                )}
-              </Button>
+            <div className="space-y-3">
+              <label className="font-medium">{t("memoriesTtlDays")}</label>
+              <p className="text-sm text-muted-foreground">
+                {locale === "zh"
+                  ? "超过这个天数的记忆会被自动标记为过期。"
+                  : "Memories older than this many days will be marked as expired."}
+              </p>
+              <Input
+                type="number"
+                min={0}
+                value={settings.memory_ttl_days}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    memory_ttl_days: parseInt(e.target.value || "0"),
+                  })
+                }
+              />
             </div>
+            <div className="space-y-3">
+              <label className="font-medium">{t("memoriesConflictPolicy")}</label>
+              <p className="text-sm text-muted-foreground">
+                {locale === "zh"
+                  ? "当新的记忆和已有记忆冲突时，系统会按这个策略处理。"
+                  : "How the system should resolve conflicts with existing memories."}
+              </p>
+              <Select
+                value={settings.memory_conflict_policy}
+                onValueChange={(value) =>
+                  setSettings({
+                    ...settings,
+                    memory_conflict_policy: value,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("memoriesConflictPolicy")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest_wins">{t("memoriesPolicyLatest")}</SelectItem>
+                  <SelectItem value="importance_wins">{t("memoriesPolicyImportance")}</SelectItem>
+                  <SelectItem value="merge">{t("memoriesPolicyMerge")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-3">
+              <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
+              <p className="text-sm text-muted-foreground">
+                {t("memoriesWhitelistHint")}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newWhitelistItem}
+                  onChange={(e) => setNewWhitelistItem(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addWhitelistItem();
+                  }}
+                  placeholder={t("memoriesAddTopic")}
+                  className="flex-1 px-3 py-2 rounded-lg border border-border bg-background"
+                />
+                <Button onClick={addWhitelistItem} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {settings.whitelist_topics.map((item) => (
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 text-sm"
+                  >
+                    {item}
+                    <button
+                      onClick={() => removeWhitelistItem(item)}
+                      className="hover:text-emerald-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className="font-medium">{t("memoriesBlacklistTopics")}</label>
+              <p className="text-sm text-muted-foreground">
+                {t("memoriesBlacklistHint")}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newBlacklistItem}
+                  onChange={(e) => setNewBlacklistItem(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addBlacklistItem();
+                  }}
+                  placeholder={t("memoriesAddTopic")}
+                  className="flex-1 px-3 py-2 rounded-lg border border-border bg-background"
+                />
+                <Button onClick={addBlacklistItem} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {settings.blacklist_topics.map((item) => (
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm"
+                  >
+                    {item}
+                    <button
+                      onClick={() => removeBlacklistItem(item)}
+                      className="hover:text-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
+            <Button variant="outline" onClick={() => setShowSettings(false)}>
+              {t("memoriesCancel")}
+            </Button>
+            <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
+              {isSavingSettings ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("memoriesSaving")}
+                </>
+              ) : (
+                t("memoriesSave")
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

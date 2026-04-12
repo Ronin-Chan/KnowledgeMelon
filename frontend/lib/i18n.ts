@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { useSettingsStore } from "@/stores/settings";
@@ -232,8 +232,8 @@ const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     themeLightDescription: "明亮、清晰，适合日常使用。",
     themeDark: "深色模式",
     themeDarkDescription: "更护眼，适合长时间阅读和使用。",
-    languageChinese: "简体中文",
-    languageChineseDescription: "使用简体中文界面。",
+    languageChinese: "中文",
+    languageChineseDescription: "使用中文界面。",
     languageEnglish: "English",
     languageEnglishDescription: "Use the interface in English.",
     languageSelectHint: "切换语言后，界面会立即更新。",
@@ -247,7 +247,7 @@ const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     ".": ".",
   },  en: {
     appName: "Knowledge Melon",
-    appTagline: "Knowledge, memory, and chat in one flow",
+    appTagline: "Where knowledge, memory, and conversation flow naturally",
 
     navHome: "Home",
     navChat: "Chat",

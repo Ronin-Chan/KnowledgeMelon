@@ -136,70 +136,70 @@ export const getFileTypeTheme = (fileType: string): FileTypeTheme => {
   switch (getFileTypeCategory(fileType)) {
     case "image":
       return {
-        iconBg: "bg-fuchsia-100 dark:bg-fuchsia-950/50",
-        iconText: "text-fuchsia-700 dark:text-fuchsia-300",
-        panelBg: "bg-fuchsia-50/70 dark:bg-fuchsia-950/20",
-        panelBorder: "border-fuchsia-200 dark:border-fuchsia-900/60",
+        iconBg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
+        iconText: "text-fuchsia-600 dark:text-fuchsia-300",
+        panelBg: "bg-background",
+        panelBorder: "shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
         chipClassName:
-          "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-900/60 dark:bg-fuchsia-950/30 dark:text-fuchsia-200",
+          "bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950/30 dark:text-fuchsia-200",
         rowClassName:
-          "bg-fuchsia-50/50 hover:bg-fuchsia-100/70 dark:bg-fuchsia-950/10 dark:hover:bg-fuchsia-950/20",
+          "bg-background hover:bg-muted/40",
         actionButtonClassName:
           "hover:bg-fuchsia-500/10 hover:text-fuchsia-600 dark:hover:bg-fuchsia-400/10 dark:hover:text-fuchsia-300",
         progressBar: "bg-fuchsia-500",
       };
     case "table":
       return {
-        iconBg: "bg-emerald-100 dark:bg-emerald-950/50",
-        iconText: "text-emerald-700 dark:text-emerald-300",
-        panelBg: "bg-emerald-50/70 dark:bg-emerald-950/20",
-        panelBorder: "border-emerald-200 dark:border-emerald-900/60",
+        iconBg: "bg-emerald-50 dark:bg-emerald-950/40",
+        iconText: "text-emerald-600 dark:text-emerald-300",
+        panelBg: "bg-background",
+        panelBorder: "shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
         chipClassName:
-          "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
+          "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200",
         rowClassName:
-          "bg-emerald-50/50 hover:bg-emerald-100/70 dark:bg-emerald-950/10 dark:hover:bg-emerald-950/20",
+          "bg-background hover:bg-muted/40",
         actionButtonClassName:
           "hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300",
         progressBar: "bg-emerald-500",
       };
     case "code":
       return {
-        iconBg: "bg-indigo-100 dark:bg-indigo-950/50",
-        iconText: "text-indigo-700 dark:text-indigo-300",
-        panelBg: "bg-indigo-50/70 dark:bg-indigo-950/20",
-        panelBorder: "border-indigo-200 dark:border-indigo-900/60",
+        iconBg: "bg-indigo-50 dark:bg-indigo-950/40",
+        iconText: "text-indigo-600 dark:text-indigo-300",
+        panelBg: "bg-background",
+        panelBorder: "shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
         chipClassName:
-          "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200",
+          "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-200",
         rowClassName:
-          "bg-indigo-50/50 hover:bg-indigo-100/70 dark:bg-indigo-950/10 dark:hover:bg-indigo-950/20",
+          "bg-background hover:bg-muted/40",
         actionButtonClassName:
           "hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:bg-indigo-400/10 dark:hover:text-indigo-300",
         progressBar: "bg-indigo-500",
       };
     case "structured":
       return {
-        iconBg: "bg-amber-100 dark:bg-amber-950/50",
-        iconText: "text-amber-700 dark:text-amber-300",
-        panelBg: "bg-amber-50/70 dark:bg-amber-950/20",
-        panelBorder: "border-amber-200 dark:border-amber-900/60",
+        iconBg: "bg-amber-50 dark:bg-amber-950/40",
+        iconText: "text-amber-600 dark:text-amber-300",
+        panelBg: "bg-background",
+        panelBorder: "shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
         chipClassName:
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200",
+          "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-200",
         rowClassName:
-          "bg-amber-50/50 hover:bg-amber-100/70 dark:bg-amber-950/10 dark:hover:bg-amber-950/20",
+          "bg-background hover:bg-muted/40",
         actionButtonClassName:
           "hover:bg-amber-500/10 hover:text-amber-600 dark:hover:bg-amber-400/10 dark:hover:text-amber-300",
         progressBar: "bg-amber-500",
       };
     case "document":
       return {
-        iconBg: "bg-sky-100 dark:bg-sky-950/50",
-        iconText: "text-sky-700 dark:text-sky-300",
-        panelBg: "bg-sky-50/70 dark:bg-sky-950/20",
-        panelBorder: "border-sky-200 dark:border-sky-900/60",
+        iconBg: "bg-sky-50 dark:bg-sky-950/40",
+        iconText: "text-sky-600 dark:text-sky-300",
+        panelBg: "bg-background",
+        panelBorder: "shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
         chipClassName:
-          "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200",
+          "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-200",
         rowClassName:
-          "bg-sky-50/50 hover:bg-sky-100/70 dark:bg-sky-950/10 dark:hover:bg-sky-950/20",
+          "bg-background hover:bg-muted/40",
         actionButtonClassName:
           "hover:bg-sky-500/10 hover:text-sky-600 dark:hover:bg-sky-400/10 dark:hover:text-sky-300",
         progressBar: "bg-sky-500",
@@ -208,9 +208,10 @@ export const getFileTypeTheme = (fileType: string): FileTypeTheme => {
       return {
         iconBg: "bg-muted",
         iconText: "text-muted-foreground",
-        panelBg: "bg-white/70 dark:bg-muted/20",
-        panelBorder: "border-border",
-        chipClassName: "border-border bg-muted/50 text-muted-foreground",
+        panelBg: "bg-background",
+        panelBorder:
+          "shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
+        chipClassName: "bg-muted text-muted-foreground",
         rowClassName: "bg-background hover:bg-muted/60",
         actionButtonClassName: "hover:bg-muted hover:text-foreground",
         progressBar: "bg-blue-500",
@@ -227,13 +228,15 @@ export const getFileTypePreviewCopy = (
       return locale === "zh"
         ? {
             title: "图片 OCR 预览",
-            description: "已从截图或图片中提取文字，适合查看扫描件、截图和带注释图片。",
+            description:
+              "已从截图或图片中提取文字，适合查看扫描件、截图和带注释图片。",
             emptyTitle: "未识别到图片文字",
             emptyHint: "这类文件可能只有图像内容，没有可提取的文字。",
           }
         : {
             title: "Image OCR preview",
-            description: "Text extracted from screenshots or photos, useful for scans, annotations, and image notes.",
+            description:
+              "Text extracted from screenshots or photos, useful for scans, annotations, and image notes.",
             emptyTitle: "No text detected in image",
             emptyHint: "This file may contain only visual content without extractable text.",
           };
@@ -241,13 +244,15 @@ export const getFileTypePreviewCopy = (
       return locale === "zh"
         ? {
             title: "表格内容预览",
-            description: "适合查看按行列组织的数据，如 CSV、TSV 或电子表格导出内容。",
+            description:
+              "适合查看按行列组织的数据，如 CSV、TSV 或电子表格导出内容。",
             emptyTitle: "未生成表格预览",
             emptyHint: "当前文件没有可显示的表格文本。",
           }
         : {
             title: "Spreadsheet preview",
-            description: "Best for row-and-column data such as CSV, TSV, and spreadsheet exports.",
+            description:
+              "Best for row-and-column data such as CSV, TSV, and spreadsheet exports.",
             emptyTitle: "No table preview available",
             emptyHint: "This file does not contain table text that can be shown here.",
           };
@@ -255,13 +260,15 @@ export const getFileTypePreviewCopy = (
       return locale === "zh"
         ? {
             title: "代码与配置预览",
-            description: "适合查看源代码、脚本和配置文件，保留更多文本结构感。",
+            description:
+              "适合查看源代码、脚本和配置文件，保留更多文本结构感。",
             emptyTitle: "未生成代码预览",
             emptyHint: "当前文件没有可显示的代码内容。",
           }
         : {
             title: "Code and config preview",
-            description: "Useful for source files, scripts, and config content with a stronger code-like feel.",
+            description:
+              "Useful for source files, scripts, and config content with a stronger code-like feel.",
             emptyTitle: "No code preview available",
             emptyHint: "This file does not contain displayable code content.",
           };
@@ -269,13 +276,15 @@ export const getFileTypePreviewCopy = (
       return locale === "zh"
         ? {
             title: "结构化文本预览",
-            description: "适合 JSON、XML、日志、字幕等结构化或半结构化文本。",
+            description:
+              "适合 JSON、XML、日志、字幕等结构化或半结构化文本。",
             emptyTitle: "未生成结构化预览",
             emptyHint: "当前文件没有可显示的结构化文本。",
           }
         : {
             title: "Structured text preview",
-            description: "Useful for JSON, XML, logs, subtitles, and other semi-structured text.",
+            description:
+              "Useful for JSON, XML, logs, subtitles, and other semi-structured text.",
             emptyTitle: "No structured preview available",
             emptyHint: "This file does not contain displayable structured text.",
           };
@@ -283,7 +292,8 @@ export const getFileTypePreviewCopy = (
       return locale === "zh"
         ? {
             title: "文档内容预览",
-            description: "适合 PDF、Word、PPT、Markdown 和纯文本等常见文档。",
+            description:
+              "适合 PDF、Word、PPT、Markdown 和纯文本等常见文档。",
             emptyTitle: "未生成文档预览",
             emptyHint: "当前文件没有可显示的文档文字。",
           }
