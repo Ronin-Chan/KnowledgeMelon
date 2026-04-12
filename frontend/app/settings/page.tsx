@@ -20,6 +20,7 @@ import { AppShell } from "@/components/app-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
+import { PageContainer, PageHeader, PageSurface } from "@/components/page-shell";
 import { useT } from "@/lib/i18n";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -183,10 +184,14 @@ export default function SettingsPage() {
       </div>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-          <h1 className="mb-8 text-3xl font-semibold">{t("settingsTitle")}</h1>
+        <PageContainer>
+          <PageHeader
+            title={t("settingsTitle")}
+            description={locale === "zh" ? "统一管理模型、提供商、外观与语言。" : "Manage models, providers, appearance, and language in one place."}
+          />
 
-          <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border pb-1">
+          <PageSurface className="mt-8 p-2">
+          <div className="flex gap-2 overflow-x-auto">
             {[
               ["models", t("settingsModels")],
               ["providers", t("settingsApi")],
@@ -196,19 +201,20 @@ export default function SettingsPage() {
               <button
                 key={value}
                 onClick={() => setActiveTab(value as SettingsTab)}
-                className={`shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === value
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {label}
               </button>
             ))}
           </div>
+          </PageSurface>
 
           {activeTab === "models" && (
-            <div>
+            <div className="mt-8 space-y-6">
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Bot className="h-5 w-5" />
@@ -284,7 +290,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "providers" && (
-            <div>
+            <div className="mt-8 space-y-6">
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Key className="h-5 w-5" />
@@ -437,7 +443,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "appearance" && (
-            <div>
+            <div className="mt-8 space-y-6">
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <SunMedium className="h-5 w-5" />
@@ -485,7 +491,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "language" && (
-            <div>
+            <div className="mt-8 space-y-6">
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Languages className="h-5 w-5" />
@@ -521,7 +527,7 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-        </div>
+        </PageContainer>
       </main>
     </AppShell>
   );

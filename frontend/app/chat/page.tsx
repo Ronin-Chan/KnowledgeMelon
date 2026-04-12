@@ -1145,7 +1145,7 @@ export default function ChatPage() {
     }
 
     return (
-        <div className="relative flex h-screen bg-background">
+        <div className="relative flex h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.04),transparent_28%),linear-gradient(to_bottom,rgba(250,250,250,1),rgba(255,255,255,1))] text-foreground dark:bg-[#0d0d0d] dark:[background-image:none]">
             {isMobileViewport && sidebarOpen && (
                 <button
                     type="button"
@@ -1157,15 +1157,15 @@ export default function ChatPage() {
 
             {/* 侧边栏 */}
             <aside
-                className={`fixed inset-y-0 left-0 z-40 flex w-64 max-w-[80vw] flex-col overflow-hidden border-r border-gray-200 dark:border-gray-800 bg-[#f9f9f9] dark:bg-[#0d0d0d] transition-transform duration-300 md:relative md:z-auto md:max-w-none md:translate-x-0 md:transition-[width,transform] ${sidebarOpen ? "translate-x-0 md:w-64" : "-translate-x-full md:translate-x-0 md:w-0 md:border-r-0"}`}
+                className={`fixed inset-y-0 left-0 z-40 flex w-64 max-w-[80vw] flex-col overflow-hidden border-r border-border/70 bg-sidebar-background/90 backdrop-blur-xl transition-transform duration-300 md:relative md:z-auto md:max-w-none md:translate-x-0 md:transition-[width,transform] ${sidebarOpen ? "translate-x-0 md:w-64" : "-translate-x-full md:translate-x-0 md:w-0 md:border-r-0"}`}
             >
                 {/* 新建对话按钮 */}
                 <div className="p-3">
                     <button
                         onClick={createNewConversation}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all text-sm font-medium text-gray-700 dark:text-gray-200"
+                        className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-background px-3 py-2.5 text-sm font-medium text-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-18px_rgba(0,0,0,0.35)]"
                     >
-                        <Plus className="h-4 w-4 text-gray-500" />
+                        <Plus className="h-4 w-4 text-muted-foreground" />
                         {t("chatNewConversation")}
                     </button>
                 </div>
@@ -1175,7 +1175,7 @@ export default function ChatPage() {
                     {/* 搜索 */}
                     <div className="px-0.5 py-1">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder={t("chatSearchPlaceholder")}
@@ -1186,19 +1186,19 @@ export default function ChatPage() {
                                         handleSearchConversations();
                                     }
                                 }}
-                                className="w-full pl-9 pr-8 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 dark:focus:border-gray-700"
+                                className="w-full rounded-xl border border-border/70 bg-background px-9 pr-8 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
                             />
                             {searchQuery && (
                                 <button
                                     onClick={clearSearch}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 hover:bg-muted"
                                 >
-                                    <X className="h-3 w-3 text-gray-400" />
+                                    <X className="h-3 w-3 text-muted-foreground" />
                                 </button>
                             )}
                         </div>
                         {isSearching && (
-                            <p className="text-xs text-gray-400 mt-1 px-3">{t("chatSearchLoading")}</p>
+                            <p className="mt-1 px-3 text-xs text-muted-foreground">{t("chatSearchLoading")}</p>
                         )}
                     </div>
 
@@ -1206,7 +1206,7 @@ export default function ChatPage() {
                     <div className="mt-1">
                         <Link
                             href="/"
-                            className="flex items-center gap-3 rounded-xl border border-gray-200/80 dark:border-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all cursor-pointer"
+                            className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/80 px-3 py-2.5 text-sm text-foreground transition-all hover:-translate-y-0.5 hover:bg-muted/80 cursor-pointer"
                         >
                             <Home className="h-4 w-4" />
                             <span className="font-medium">{t("navHome")}</span>
@@ -1214,16 +1214,16 @@ export default function ChatPage() {
                     </div>
 
                     {/* 功能开关 */}
-                    <div className="mt-6 flex min-h-0 flex-1 flex-col px-1">
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
+                    <div className="mt-4 flex min-h-0 flex-1 flex-col px-1">
+                        <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                             {t("chatFeatureSwitch")}
                         </p>
                         <div className="grid grid-cols-3 gap-1.5 px-1">
                             <button
                                 onClick={() => setUseRAG(!useRAG)}
-                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useRAG
-                                    ? "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400"
-                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useRAG
+                                    ? "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400"
+                                    : "text-muted-foreground hover:bg-muted/80"
                                     }`}
                             >
                                 <BookOpen className="h-4 w-4" />
@@ -1234,9 +1234,9 @@ export default function ChatPage() {
                             </button>
                             <button
                                 onClick={() => setUseMemory(!useMemory)}
-                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useMemory
-                                    ? "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400"
-                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useMemory
+                                    ? "bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400"
+                                    : "text-muted-foreground hover:bg-muted/80"
                                     }`}
                             >
                                 <Brain className="h-4 w-4" />
@@ -1247,9 +1247,9 @@ export default function ChatPage() {
                             </button>
                             <button
                                 onClick={() => setUseTools(!useTools)}
-                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useTools
-                                    ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
-                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useTools
+                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                    : "text-muted-foreground hover:bg-muted/80"
                                     }`}
                             >
                                 <Search className="h-4 w-4" />
@@ -1259,15 +1259,15 @@ export default function ChatPage() {
                                 )}
                             </button>
                         </div>
-                        <div className="mt-6 flex min-h-0 flex-1 flex-col">
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
+                        <div className="mt-4 flex min-h-0 flex-1 flex-col">
+                            <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 {searchQuery
                                     ? `${t("chatSearchResultsHeader")} (${filteredConversations.length})`
                                     : `${t("chatRecentHeader")} (${conversations.length})`}
                             </p>
                             <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5 pr-1">
                                 {filteredConversations.length === 0 && searchQuery ? (
-                                    <p className="text-sm text-gray-400 px-3 py-2">
+                                    <p className="px-3 py-2 text-sm text-muted-foreground">
                                         {t("chatNoMatchesHint")}
                                     </p>
                                 ) : (
@@ -1275,21 +1275,21 @@ export default function ChatPage() {
                                         <div
                                             key={chat.id}
                                             title={chat.title}
-                                            className={`group flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm transition-all w-full ${currentConversationId === chat.id
-                                                ? "bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-                                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/50"
+                                            className={`group flex items-start gap-2 rounded-2xl px-3 py-2.5 text-sm transition-all w-full ${currentConversationId === chat.id
+                                                ? "border border-border/70 bg-background text-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.04)]"
+                                                : "text-muted-foreground hover:bg-muted/70"
                                                 }`}
                                         >
                                             <button
                                                 onClick={() => loadConversation(chat.id)}
                                                 className="flex flex-1 items-start gap-3 text-left min-w-0"
                                             >
-                                                <MessageSquare className="h-4 w-4 shrink-0 mt-0.5 text-gray-400" />
+                                                <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                                                 <div className="flex-1 min-w-0">
                                                     <span className="truncate block font-medium" title={chat.title}>
                                                         {chat.title}
                                                     </span>
-                                                    <span className="text-xs text-gray-400">
+                                                    <span className="text-xs text-muted-foreground">
                                                         {formatDate(chat.updated_at)} · {t("chatMessageCount", {
                                                             count: chat.message_count,
                                                         })}
@@ -1301,7 +1301,7 @@ export default function ChatPage() {
                                                     e.stopPropagation();
                                                     setPendingDeleteConversation(chat.id);
                                                 }}
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-950/40 text-gray-400 hover:text-red-500 transition-all"
+                                                className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-red-100 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950/40"
                                                 title={t("chatDeleteConversation")}
                                                 aria-label={t("chatDeleteConversation")}
                                             >
@@ -1317,76 +1317,78 @@ export default function ChatPage() {
             </aside>
 
             {/* 主内容 */}
-            <main className="flex min-w-0 flex-1 flex-col bg-white dark:bg-[#0d0d0d]">
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
                 {/* 标题栏 */}
-                <header className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-4">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
-                        >
-                            {sidebarOpen ? (
-                                <X className="h-5 w-5" />
-                            ) : (
-                                <Menu className="h-5 w-5" />
-                            )}
-                        </button>
-                        <Select
-                            value={model}
-                            onValueChange={(value) => {
-                                const m = SUPPORTED_MODELS.find((mod) => mod.id === value);
-                                if (m) {
-                                    setModel(m.id);
-                                    setSelectedProvider(m.provider);
-                                }
-                            }}
-                        >
-                            <SelectTrigger className="w-full min-w-0 text-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600 transition-colors sm:w-[320px]">
-                                <SelectValue placeholder={t("chatSelectModel")}>
-                                    {currentModel && (
-                                        <div className="flex items-center gap-2 truncate">
-                                            <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                {currentModel.name}
-                                            </span>
-                                            <span className="text-gray-500 text-xs truncate">
-                                                {
-                                                    PROVIDERS.find((p) => p.id === currentModel.provider)
-                                                        ?.name
-                                                }
-                                            </span>
-                                        </div>
-                                    )}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="max-h-125 w-90">
-                                {localizedModels.map((m) => (
-                                    <SelectItem
-                                        key={m.id}
-                                        value={m.id}
-                                        className="py-3 h-auto whitespace-normal"
-                                    >
-                                        <div className="flex flex-col items-start gap-1 w-full max-w-90">
-                                            <span className="font-medium text-sm truncate w-full">
-                                                {m.name}
-                                            </span>
-                                            <span className="text-xs text-gray-500 leading-relaxed wrap-break-word w-full">
-                                                {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
-                                                {m.description}
-                                            </span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <div className="flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1">
+                <header className="sticky top-0 z-20 bg-background/85 px-3 py-3 backdrop-blur sm:px-4">
+                    <div className="flex flex-wrap items-center gap-3 rounded-[28px] border border-border/70 bg-background/90 px-3 py-3 shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_2px_2px_rgba(0,0,0,0.02),0_12px_32px_-24px_rgba(0,0,0,0.24)]">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            >
+                                {sidebarOpen ? (
+                                    <X className="h-5 w-5" />
+                                ) : (
+                                    <Menu className="h-5 w-5" />
+                                )}
+                            </button>
+                            <Select
+                                value={model}
+                                onValueChange={(value) => {
+                                    const m = SUPPORTED_MODELS.find((mod) => mod.id === value);
+                                    if (m) {
+                                        setModel(m.id);
+                                        setSelectedProvider(m.provider);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full min-w-0 text-sm border-border/70 bg-background hover:border-muted-foreground/30 transition-colors sm:w-[320px]">
+                                    <SelectValue placeholder={t("chatSelectModel")}>
+                                        {currentModel && (
+                                            <div className="flex items-center gap-2 truncate">
+                                                <span className="font-medium text-foreground">
+                                                    {currentModel.name}
+                                                </span>
+                                                <span className="truncate text-xs text-muted-foreground">
+                                                    {
+                                                        PROVIDERS.find((p) => p.id === currentModel.provider)
+                                                            ?.name
+                                                    }
+                                                </span>
+                                            </div>
+                                        )}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="max-h-125 w-90">
+                                    {localizedModels.map((m) => (
+                                        <SelectItem
+                                            key={m.id}
+                                            value={m.id}
+                                            className="h-auto whitespace-normal py-3"
+                                        >
+                                            <div className="flex w-full max-w-90 flex-col items-start gap-1">
+                                                <span className="w-full truncate text-sm font-medium">
+                                                    {m.name}
+                                                </span>
+                                                <span className="wrap-break-word w-full text-xs leading-relaxed text-muted-foreground">
+                                                    {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
+                                                    {m.description}
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center gap-1 rounded-full border border-border/70 bg-background p-1">
                             {(["concise", "balanced", "detailed"] as const).map((value) => (
                                 <button
                                     key={value}
                                     type="button"
                                     onClick={() => setResponseLength(value)}
                                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${responseLength === value
-                                        ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-                                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                        ? "bg-foreground text-background"
+                                        : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
                                     {locale === "zh"
@@ -1407,325 +1409,329 @@ export default function ChatPage() {
                 </header>
 
                 {/* 聊天区域 */}
-                <div className="flex-1 overflow-y-auto">
-                    {messages.length === 0 ? (
-                        // 欢迎界面
-                        <div className="flex flex-col items-center justify-center h-full px-4">
-                            <h1 className="text-4xl font-semibold text-gray-900 dark:text-gray-100 mb-10 tracking-tight">
-                                {t("chatWelcome")}
-                            </h1>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                        {messages.length === 0 ? (
+                            // 欢迎界面
+                            <div className="flex min-h-full flex-col items-center justify-center px-4 py-12">
+                                <h1 className="mb-10 text-4xl font-semibold tracking-tight text-foreground">
+                                    {t("chatWelcome")}
+                                </h1>
 
-                            {/* 建议 */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl w-full mb-8">
-                                {[
-                                    t("chatSuggestion1"),
-                                    t("chatSuggestion2"),
-                                    t("chatSuggestion3"),
-                                    t("chatSuggestion4"),
-                                ].map((suggestion) => (
-                                    <button
-                                        key={suggestion}
-                                        onClick={() => setInput(suggestion)}
-                                        className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-all text-left text-sm text-gray-700 dark:text-gray-300"
-                                    >
-                                        {suggestion}
-                                    </button>
-                                ))}
+                                {/* 建议 */}
+                                <div className="mb-8 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+                                    {[
+                                        t("chatSuggestion1"),
+                                        t("chatSuggestion2"),
+                                        t("chatSuggestion3"),
+                                        t("chatSuggestion4"),
+                                    ].map((suggestion) => (
+                                        <button
+                                            key={suggestion}
+                                            onClick={() => setInput(suggestion)}
+                                            className="rounded-2xl border border-border/70 bg-background/90 p-4 text-left text-sm text-foreground transition-all hover:-translate-y-0.5 hover:bg-muted/50 hover:shadow-[0_12px_24px_-18px_rgba(0,0,0,0.35)]"
+                                        >
+                                            {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        // 消息列表
-                        <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-                            {messages.map((message) => (
-                                <div
-                                    key={message.id}
-                                    className={`flex gap-4 group ${message.role === "user" ? "flex-row-reverse" : ""
-                                        }`}
-                                >
-                                    {/* 头像 */}
+                        ) : (
+                            // 消息列表
+                            <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+                                {messages.map((message) => (
                                     <div
-                                        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${message.role === "user"
-                                            ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+                                        key={message.id}
+                                        className={`flex gap-4 group ${message.role === "user" ? "flex-row-reverse" : ""
                                             }`}
                                     >
-                                        {message.role === "user" ? "U" : "AI"}
-                                    </div>
-
-                                    {/* 内容 */}
-                                    <div
-                                        className={`flex-1 ${message.role === "user" ? "text-right" : ""
-                                            }`}
-                                    >
+                                        {/* 头像 */}
                                         <div
-                                            className={`inline-block text-left max-w-5xl px-3 py-2.5 rounded-2xl ${message.role === "user"
-                                                ? "bg-gray-900 dark:bg-blue-600 text-white rounded-br-md"
-                                                : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 rounded-bl-md shadow-sm"
+                                            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${message.role === "user"
+                                                ? "bg-foreground text-background"
+                                                : "border border-border/70 bg-background text-muted-foreground"
                                                 }`}
                                         >
-                                            {message.role === "assistant" &&
-                                                !message.content &&
-                                                isLoading &&
-                                                messages[messages.length - 1]?.id === message.id ? (
-                                                <div className="flex items-center gap-2 py-1">
-                                                    <span
-                                                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                                                        style={{ animationDelay: "0ms" }}
-                                                    />
-                                                    <span
-                                                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                                                        style={{ animationDelay: "150ms" }}
-                                                    />
-                                                    <span
-                                                        className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-                                                        style={{ animationDelay: "300ms" }}
-                                                    />
-                                                </div>
-                                            ) : (
-                                                message.role === "assistant" ? (
-                                                    <div className="prose prose-sm max-w-none break-words leading-relaxed text-sm dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-code:break-words prose-pre:my-1.5 prose-pre:overflow-x-auto">
-                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                            {message.content}
-                                                        </ReactMarkdown>
-                                                    </div>
-                                                ) : (
-                                                    <p className="whitespace-pre-wrap leading-relaxed text-sm">
-                                                        {message.content}
-                                                    </p>
-                                                )
-                                            )}
+                                            {message.role === "user" ? "U" : "AI"}
                                         </div>
 
-                                        {message.role === "assistant" &&
-                                            messageSources[message.id]?.length ? (
-                                            <details className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-3 text-left">
-                                                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                        <Link2 className="h-3.5 w-3.5" />
-                                                        {t("chatSourcesTitle")}
-                                                    </div>
-                                                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] font-medium text-gray-500">
-                                                        {messageSources[message.id].length} {t("chatSourcesExpand")}
-                                                    </span>
-                                                </summary>
-                                                <div className="mt-3 space-y-2">
-                                                    {messageSources[message.id].map((source) => (
-                                                        <div
-                                                            key={source.id}
-                                                            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
-                                                        >
-                                                            <div className="flex items-start justify-between gap-3">
-                                                                <div className="min-w-0">
-                                                                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                                        {source.document_title}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-500">
-                                                                        {t("chatSourceChunkLabel", {
-                                                                            index: source.chunk_index + 1,
-                                                                            score: source.score.toFixed(2),
-                                                                        })}
-                                                                    </p>
-                                                                </div>
-                                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-500">
-                                                                    {source.score.toFixed(2)}
-                                                                </span>
-                                                            </div>
-                                                            <p className="mt-2 text-xs leading-5 text-gray-600 dark:text-gray-300">
-                                                                {getSourceSnippet(source.content)}
-                                                            </p>
-                                                            <details className="mt-2">
-                                                                <summary className="cursor-pointer text-[11px] font-medium text-primary hover:underline">
-                                                                    {locale === "zh" ? "展开查看原文" : "Expand to view details"}
-                                                                </summary>
-                                                                <div className="mt-2 space-y-2">
-                                                                    <p className="whitespace-pre-wrap text-xs leading-5 text-gray-600 dark:text-gray-300">
-                                                                        {source.content}
-                                                                    </p>
-                                                                    <p className="text-[11px] text-gray-400">
-                                                                        {source.reason}
-                                                                    </p>
-                                                                </div>
-                                                            </details>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </details>
-                                        ) : null}
-
-                                        {/* 消息操作 - 仅助手消息显示 */}
-                                        {message.role === "assistant" && (
-                                            <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() =>
-                                                        handleCopyMessage(message.content, message.id)
-                                                    }
-                                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
-                                                    title={t("chatCopy")}
-                                                >
-                                                    {copiedId === message.id ? (
-                                                        <Check className="h-3.5 w-3.5 text-green-500" />
-                                                    ) : (
-                                                        <Copy className="h-3.5 w-3.5" />
-                                                    )}
-                                                </button>
-                                                {messages[messages.length - 1].id === message.id &&
-                                                    !isLoading && (
-                                                        <button
-                                                            onClick={handleRegenerate}
-                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
-                                                            title={t("chatRegenerate")}
-                                                        >
-                                                            <RotateCcw className="h-3.5 w-3.5" />
-                                                        </button>
-                                                    )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </div>
-                    )}
-                </div>
-
-                <AlertDialog
-                    open={pendingDeleteConversation !== null}
-                    onOpenChange={(open) => !open && setPendingDeleteConversation(null)}
-                >
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>{t("chatDeleteConversation")}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                {t("chatDeleteConversationBody")}
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>{t("chatCancel")}</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={() => {
-                                    if (pendingDeleteConversation) {
-                                        handleDeleteConversation(pendingDeleteConversation);
-                                    }
-                                }}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                                {t("chatDelete")}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-
-                <Dialog
-                    open={isKnowledgePromptOpen}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            handleKeepCurrentSessionOnly();
-                        }
-                    }}
-                >
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>{t("chatAttachmentPromptTitle")}</DialogTitle>
-                            <DialogDescription>
-                                {t("chatAttachmentPromptBody")}
-                            </DialogDescription>
-                        </DialogHeader>
-                        {pendingKnowledgeAttachments.length > 0 && (
-                            <div className="mt-2 space-y-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 p-3">
-                                <div className="flex items-center justify-between gap-2 px-1">
-                                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                                        {t("chatAttachmentChecklist")}
-                                    </p>
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedKnowledgeAttachmentIds(
-                                                    pendingKnowledgeAttachments.map((item) => item.id),
-                                                )
-                                            }
-                                            className="text-primary hover:underline"
+                                        {/* 内容 */}
+                                        <div
+                                            className={`flex-1 ${message.role === "user" ? "text-right" : ""
+                                                }`}
                                         >
-                                            {t("chatAttachmentSelectAll")}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedKnowledgeAttachmentIds([])}
-                                            className="text-gray-500 hover:underline"
-                                        >
-                                            {t("chatAttachmentClearSelection")}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="max-h-56 overflow-y-auto space-y-2">
-                                    {pendingKnowledgeAttachments.map((attachment) => {
-                                        const checked = selectedKnowledgeAttachmentIds.includes(
-                                            attachment.id,
-                                        );
-                                        return (
-                                            <label
-                                                key={attachment.id}
-                                                className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                                            <div
+                                                className={`inline-block max-w-5xl rounded-2xl px-3 py-2.5 text-left ${message.role === "user"
+                                                    ? "rounded-br-md bg-foreground text-background"
+                                                    : "rounded-bl-md border border-border/70 bg-background text-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.04)]"
+                                                    }`}
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={(e) => {
-                                                        setSelectedKnowledgeAttachmentIds(
-                                                            (prev) =>
-                                                                e.target.checked
-                                                                    ? Array.from(
-                                                                        new Set([
-                                                                            ...prev,
-                                                                            attachment.id,
-                                                                        ]),
-                                                                    )
-                                                                    : prev.filter(
-                                                                        (id) =>
-                                                                            id !==
-                                                                            attachment.id,
-                                                                    ),
-                                                        );
-                                                    }}
-                                                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                                />
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate font-medium text-gray-900 dark:text-gray-100">
-                                                        {attachment.name}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {attachment.file.name
-                                                            .split(".")
-                                                            .pop()
-                                                            ?.toLowerCase()}
-                                                    </p>
+                                                {message.role === "assistant" &&
+                                                    !message.content &&
+                                                    isLoading &&
+                                                    messages[messages.length - 1]?.id === message.id ? (
+                                                    <div className="flex items-center gap-2 py-1">
+                                                        <span
+                                                            className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground"
+                                                            style={{ animationDelay: "0ms" }}
+                                                        />
+                                                        <span
+                                                            className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground"
+                                                            style={{ animationDelay: "150ms" }}
+                                                        />
+                                                        <span
+                                                            className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground"
+                                                            style={{ animationDelay: "300ms" }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    message.role === "assistant" ? (
+                                                        <div className="prose prose-sm max-w-none break-words leading-relaxed text-sm dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-code:break-words prose-pre:my-1.5 prose-pre:overflow-x-auto">
+                                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                {message.content}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="whitespace-pre-wrap leading-relaxed text-sm">
+                                                            {message.content}
+                                                        </p>
+                                                    )
+                                                )}
+                                            </div>
+
+                                            {message.role === "assistant" &&
+                                                messageSources[message.id]?.length ? (
+                                                <details className="mt-2 rounded-2xl border border-border/70 bg-muted/40 p-3 text-left">
+                                                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                                            <Link2 className="h-3.5 w-3.5" />
+                                                            {t("chatSourcesTitle")}
+                                                        </div>
+                                                        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                                                            {messageSources[message.id].length} {t("chatSourcesExpand")}
+                                                        </span>
+                                                    </summary>
+                                                    <div className="mt-3 space-y-2">
+                                                        {messageSources[message.id].map((source) => (
+                                                            <div
+                                                                key={source.id}
+                                                                className="rounded-xl border border-border/70 bg-background px-3 py-2"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="min-w-0">
+                                                                        <p className="truncate text-sm font-medium text-foreground">
+                                                                            {source.document_title}
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {t("chatSourceChunkLabel", {
+                                                                                index: source.chunk_index + 1,
+                                                                                score: source.score.toFixed(2),
+                                                                            })}
+                                                                        </p>
+                                                                    </div>
+                                                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                                                        {source.score.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                                                                    {getSourceSnippet(source.content)}
+                                                                </p>
+                                                                <details className="mt-2">
+                                                                    <summary className="cursor-pointer text-[11px] font-medium text-primary hover:underline">
+                                                                        {locale === "zh" ? "展开查看原文" : "Expand to view details"}
+                                                                    </summary>
+                                                                    <div className="mt-2 space-y-2">
+                                                                        <p className="whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                                                                            {source.content}
+                                                                        </p>
+                                                                        <p className="text-[11px] text-muted-foreground">
+                                                                            {source.reason}
+                                                                        </p>
+                                                                    </div>
+                                                                </details>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </details>
+                                            ) : null}
+
+                                            {/* 消息操作 - 仅助手消息显示 */}
+                                            {message.role === "assistant" && (
+                                                <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleCopyMessage(message.content, message.id)
+                                                        }
+                                                        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                        title={t("chatCopy")}
+                                                    >
+                                                        {copiedId === message.id ? (
+                                                            <Check className="h-3.5 w-3.5 text-green-500" />
+                                                        ) : (
+                                                            <Copy className="h-3.5 w-3.5" />
+                                                        )}
+                                                    </button>
+                                                    {messages[messages.length - 1].id === message.id &&
+                                                        !isLoading && (
+                                                            <button
+                                                                onClick={handleRegenerate}
+                                                                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                                title={t("chatRegenerate")}
+                                                            >
+                                                                <RotateCcw className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        )}
                                                 </div>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div ref={messagesEndRef} />
                             </div>
                         )}
-                        <DialogFooter>
-                            <div className="mt-2 flex items-center justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleKeepCurrentSessionOnly}
-                                    className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
-                                >
-                                    {t("chatAttachmentKeepCurrent")}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => void handleAttachToKnowledgeBase()}
-                                    className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                                >
-                                    {t("chatAttachmentAddToKnowledge")}
-                                </button>
-                            </div>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    </div>
+
+                    <div className="shrink-0">
+                        <AlertDialog
+                            open={pendingDeleteConversation !== null}
+                            onOpenChange={(open) => !open && setPendingDeleteConversation(null)}
+                        >
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>{t("chatDeleteConversation")}</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        {t("chatDeleteConversationBody")}
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>{t("chatCancel")}</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => {
+                                            if (pendingDeleteConversation) {
+                                                handleDeleteConversation(pendingDeleteConversation);
+                                            }
+                                        }}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                        {t("chatDelete")}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
+                        <Dialog
+                            open={isKnowledgePromptOpen}
+                            onOpenChange={(open) => {
+                                if (!open) {
+                                    handleKeepCurrentSessionOnly();
+                                }
+                            }}
+                        >
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>{t("chatAttachmentPromptTitle")}</DialogTitle>
+                                    <DialogDescription>
+                                        {t("chatAttachmentPromptBody")}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                {pendingKnowledgeAttachments.length > 0 && (
+                                    <div className="mt-2 space-y-2 rounded-2xl border border-border/70 bg-muted/40 p-3">
+                                        <div className="flex items-center justify-between gap-2 px-1">
+                                            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                                {t("chatAttachmentChecklist")}
+                                            </p>
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setSelectedKnowledgeAttachmentIds(
+                                                            pendingKnowledgeAttachments.map((item) => item.id),
+                                                        )
+                                                    }
+                                                    className="text-primary hover:underline"
+                                                >
+                                                    {t("chatAttachmentSelectAll")}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedKnowledgeAttachmentIds([])}
+                                                    className="text-muted-foreground hover:underline"
+                                                >
+                                                    {t("chatAttachmentClearSelection")}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-56 overflow-y-auto space-y-2">
+                                            {pendingKnowledgeAttachments.map((attachment) => {
+                                                const checked = selectedKnowledgeAttachmentIds.includes(
+                                                    attachment.id,
+                                                );
+                                                return (
+                                                    <label
+                                                        key={attachment.id}
+                                                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={(e) => {
+                                                                setSelectedKnowledgeAttachmentIds(
+                                                                    (prev) =>
+                                                                        e.target.checked
+                                                                            ? Array.from(
+                                                                                new Set([
+                                                                                    ...prev,
+                                                                                    attachment.id,
+                                                                                ]),
+                                                                            )
+                                                                            : prev.filter(
+                                                                                (id) =>
+                                                                                    id !==
+                                                                                    attachment.id,
+                                                                            ),
+                                                                );
+                                                            }}
+                                                            className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                                                        />
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate font-medium text-foreground">
+                                                                {attachment.name}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {attachment.file.name
+                                                                    .split(".")
+                                                                    .pop()
+                                                                    ?.toLowerCase()}
+                                                            </p>
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                <DialogFooter>
+                                    <div className="mt-2 flex items-center justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleKeepCurrentSessionOnly}
+                                            className="inline-flex items-center justify-center rounded-full border border-border/70 px-4 py-2 text-sm font-medium hover:bg-muted"
+                                        >
+                                            {t("chatAttachmentKeepCurrent")}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleAttachToKnowledgeBase()}
+                                            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                                        >
+                                            {t("chatAttachmentAddToKnowledge")}
+                                        </button>
+                                    </div>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                </div>
 
                 {/* 错误提示横幅 */}
                 {errorMessage && (
@@ -1753,12 +1759,12 @@ export default function ChatPage() {
                 )}
 
                 {/* 输入区域 */}
-                <div className="px-4 pb-6 pt-2">
+                <div className="shrink-0 px-4 pb-6 pt-2">
                     <div className="max-w-5xl mx-auto">
                         <div
-                            className={`bg-white dark:bg-gray-900 rounded-3xl border shadow-lg hover:shadow-xl transition-shadow ${isDraggingFile
+                            className={`rounded-[28px] border bg-background/95 shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_2px_2px_rgba(0,0,0,0.02),0_16px_48px_-32px_rgba(0,0,0,0.24)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_6px_12px_rgba(0,0,0,0.06),0_20px_64px_-24px_rgba(0,0,0,0.28)] ${isDraggingFile
                                 ? "border-blue-400 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900/40"
-                                : "border-gray-200 dark:border-gray-800"
+                                : "border-border/70"
                                 }`}
                             onDragEnter={handleDragEnter}
                             onDragLeave={handleDragLeave}
@@ -1804,7 +1810,7 @@ export default function ChatPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveAttachment(attachment.id)}
-                                                    className="ml-1 rounded-full p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                    className="ml-1 rounded-full p-0.5 hover:bg-muted"
                                                     aria-label={t("chatAttachmentRemove")}
                                                     title={t("chatAttachmentRemove")}
                                                 >
@@ -1821,7 +1827,7 @@ export default function ChatPage() {
                                     type="button"
                                     onClick={triggerFileUpload}
                                     disabled={isUploadingFile}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-500 disabled:opacity-50"
+                                    className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
                                     title={t("chatUploadFile")}
                                     aria-label={t("chatUploadFile")}
                                 >
@@ -1832,7 +1838,7 @@ export default function ChatPage() {
                                     onClick={toggleVoiceInput}
                                     className={`p-2 rounded-xl transition-colors ${isListening
                                         ? "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400"
-                                        : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+                                        : "text-muted-foreground hover:bg-muted"
                                         }`}
                                     title={isListening ? t("chatSpeechStop") : t("chatSpeechStart")}
                                     aria-label={isListening ? t("chatSpeechStop") : t("chatSpeechStart")}
@@ -1847,7 +1853,7 @@ export default function ChatPage() {
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder={t("chatSendingPlaceholder")}
-                                className="w-full min-h-[40px] max-h-[200px] bg-transparent resize-none px-3 pb-2.5 pt-1 text-sm focus:outline-none text-gray-800 dark:text-gray-200 placeholder:text-gray-400"
+                                className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-3 pb-2.5 pt-1 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                                 rows={1}
                             />
 
@@ -1857,9 +1863,9 @@ export default function ChatPage() {
                                     data-send-button="true"
                                     onClick={handleSend}
                                     disabled={!input.trim() || isLoading}
-                                    className={`p-2.5 rounded-xl transition-all ${input.trim() && !isLoading
-                                        ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90"
-                                        : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                                    className={`rounded-xl p-2.5 transition-all ${input.trim() && !isLoading
+                                        ? "bg-foreground text-background hover:opacity-90"
+                                        : "bg-muted text-muted-foreground"
                                         }`}
                                 >
                                     <ArrowUp className="h-4 w-4" />
@@ -1870,19 +1876,19 @@ export default function ChatPage() {
                         {/* 功能状态指示 */}
                         <div className="flex items-center justify-center gap-2 mt-3">
                             {useRAG && (
-                                <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1 rounded-full font-medium">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
                                     <BookOpen className="h-3 w-3" />
                                     {t("chatRagEnabled")}
                                 </span>
                             )}
                             {useMemory && (
-                                <span className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 px-2.5 py-1 rounded-full font-medium">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-600 dark:bg-purple-950/30 dark:text-purple-400">
                                     <Brain className="h-3 w-3" />
                                     {t("chatMemoryEnabled")}
                                 </span>
                             )}
                             {useTools && (
-                                <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full font-medium">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
                                     <Search className="h-3 w-3" />
                                     {t("chatWebSearchEnabled")}
                                 </span>
@@ -1890,7 +1896,7 @@ export default function ChatPage() {
                         </div>
 
                         {statusMessage && (
-                            <p className="text-xs text-center mt-3 text-gray-500">
+                            <p className="mt-3 text-center text-xs text-muted-foreground">
                                 {statusMessage}
                             </p>
                         )}

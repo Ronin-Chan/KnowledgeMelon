@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { PageContainer, PageShell } from "@/components/page-shell";
 import { apiFetch } from "@/lib/api";
 import { useLocale, useT } from "@/lib/i18n";
 
@@ -398,9 +399,8 @@ export default function InsightsPage() {
 
   return (
     <AppShell>
-      <div className="relative min-h-screen overflow-x-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.15),transparent_34%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.12),transparent_28%),linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
+      <PageShell className="min-h-screen overflow-x-hidden dark:[background-image:none]">
+        <PageContainer>
           <div className="mb-8 flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-semibold tracking-tight">{t("insightsTitle")}</h1>
@@ -688,13 +688,17 @@ export default function InsightsPage() {
                                       <span className="truncate font-medium">{source.document_title}</span>
                                       <span className="text-muted-foreground">{source.score.toFixed(2)}</span>
                                     </div>
-                                    <p className="mt-1 text-muted-foreground">{getSourceSnippet(source.reason || source.content)}</p>
+                                    <p className="mt-1 text-muted-foreground">
+                                      {getSourceSnippet(source.reason || source.document_title)}
+                                    </p>
                                     <details className="mt-1">
                                       <summary className="cursor-pointer text-[11px] font-medium text-primary hover:underline">
                                         {t("insightsRecentExpand")}
                                       </summary>
                                       <div className="mt-2 space-y-2">
-                                        <p className="text-xs leading-5 text-muted-foreground">{source.content}</p>
+                                        <p className="text-xs leading-5 text-muted-foreground">
+                                          {source.reason || source.document_title}
+                                        </p>
                                         <p className="text-[11px] text-muted-foreground">{source.reason}</p>
                                       </div>
                                     </details>
@@ -792,8 +796,8 @@ export default function InsightsPage() {
               </section>
             </div>
           ) : null}
-        </div>
-      </div>
+        </PageContainer>
+      </PageShell>
     </AppShell>
   );
 }

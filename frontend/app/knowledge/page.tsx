@@ -32,6 +32,7 @@ import {
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { PageContainer, PageHeader, PageSurface } from "@/components/page-shell";
 import { useT } from "@/lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -272,10 +273,10 @@ export default function KnowledgePage() {
       setUploadProgress(
         options?.currentIndex && options?.totalCount
           ? t("knowledgeUploadBatchProgress", {
-              current: options.currentIndex,
-              total: options.totalCount,
-              name: file.name,
-            })
+            current: options.currentIndex,
+            total: options.totalCount,
+            name: file.name,
+          })
           : t("fileStatusParsing"),
       );
       const params = new URLSearchParams();
@@ -365,16 +366,16 @@ export default function KnowledgePage() {
       const summary =
         failureCount === 0
           ? t("knowledgeUploadBatchComplete", {
-              success: successCount,
-              total: totalCount,
-            })
+            success: successCount,
+            total: totalCount,
+          })
           : `${t("knowledgeUploadBatchComplete", {
-              success: successCount,
-              total: totalCount,
-            })}，${t("knowledgeUploadBatchPartial", {
-              success: successCount,
-              failed: failureCount,
-            })}`;
+            success: successCount,
+            total: totalCount,
+          })}，${t("knowledgeUploadBatchPartial", {
+            success: successCount,
+            failed: failureCount,
+          })}`;
       showToast(failureCount === 0 ? "success" : "info", summary);
 
       if (perFileErrors.length > 0) {
@@ -903,13 +904,12 @@ export default function KnowledgePage() {
                   {section.rows.map((row, rowIndex) => (
                     <div
                       key={`${section.title}-${sectionIndex}-row-${rowIndex}`}
-                      className={`grid border-b border-border/60 last:border-b-0 ${
-                        rowIndex === 0
-                          ? "bg-background/80 font-semibold"
-                          : rowIndex % 2 === 0
-                            ? "bg-background/55"
-                            : "bg-background/35"
-                      }`}
+                      className={`grid border-b border-border/60 last:border-b-0 ${rowIndex === 0
+                        ? "bg-background/80 font-semibold"
+                        : rowIndex % 2 === 0
+                          ? "bg-background/55"
+                          : "bg-background/35"
+                        }`}
                       style={{
                         gridTemplateColumns: `repeat(${maxColumns}, minmax(140px, 1fr))`,
                       }}
@@ -917,9 +917,8 @@ export default function KnowledgePage() {
                       {Array.from({ length: maxColumns }).map((_, cellIndex) => (
                         <div
                           key={`${section.title}-${sectionIndex}-row-${rowIndex}-cell-${cellIndex}`}
-                          className={`min-w-0 border-r border-border/60 px-4 py-3 text-sm last:border-r-0 ${
-                            rowIndex === 0 ? "text-foreground" : "text-muted-foreground"
-                          }`}
+                          className={`min-w-0 border-r border-border/60 px-4 py-3 text-sm last:border-r-0 ${rowIndex === 0 ? "text-foreground" : "text-muted-foreground"
+                            }`}
                         >
                           <span className="block truncate">
                             {row[cellIndex] ?? ""}
@@ -939,17 +938,16 @@ export default function KnowledgePage() {
 
   return (
     <AppShell>
-<div className="fixed top-4 right-4 z-50 space-y-2">
+      <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
-              toast.type === "success"
-                ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
-                : toast.type === "error"
-                  ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
-                  : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
-            }`}
+            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${toast.type === "success"
+              ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
+              : toast.type === "error"
+                ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+                : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
+              }`}
           >
             {toast.type === "success" && <Check className="h-4 w-4" />}
             {toast.type === "error" && <AlertCircle className="h-4 w-4" />}
@@ -958,7 +956,7 @@ export default function KnowledgePage() {
           </div>
         ))}
       </div>
-<aside className="hidden">
+      <aside className="hidden">
         <div className="p-4">
           <Link
             href="/chat"
@@ -984,59 +982,57 @@ export default function KnowledgePage() {
           </Link>
         </nav>
       </aside>
-<main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold mb-2">{t("knowledgeTitle")}</h1>
-              <p className="text-muted-foreground">{t("knowledgeSubtitle")}</p>
-            </div>
-
-            <div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept={SUPPORTED_FILE_ACCEPT}
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={isUploading}
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="rounded-lg"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("knowledgeUploadLoading")}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    {t("knowledgeUploadDocument")}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-          <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+      <main className="flex-1 overflow-y-auto">
+        <PageContainer>
+          <PageHeader
+            title={t("knowledgeTitle")}
+            description={t("knowledgeSubtitle")}
+            actions={
+              <>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept={SUPPORTED_FILE_ACCEPT}
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="rounded-full"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t("knowledgeUploadLoading")}
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      {t("knowledgeUploadDocument")}
+                    </>
+                  )}
+                </Button>
+              </>
+            }
+          />
+          <PageSurface className="mb-4 mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  selfOllamaServiceReady
-                    ? selfOllamaModelReady
-                      ? "bg-emerald-500"
-                      : "bg-amber-500"
-                    : "bg-gray-400"
-                }`}
+                className={`w-2 h-2 rounded-full ${selfOllamaServiceReady
+                  ? selfOllamaModelReady
+                    ? "bg-emerald-500"
+                    : "bg-amber-500"
+                  : "bg-muted-foreground/50"
+                  }`}
               />
               <div>
                 <p className="text-sm font-medium">
                   {t("knowledgeUseLocalEmbedding")}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {!selfOllamaServiceReady
                     ? t("knowledgeLocalEmbeddingMissing")
                     : selfOllamaModelReady
@@ -1048,22 +1044,20 @@ export default function KnowledgePage() {
             <button
               onClick={() => setUseLocalEmbedding(!useLocalEmbedding)}
               disabled={!selfOllamaServiceReady}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                useLocalEmbedding && selfOllamaServiceReady
-                  ? "bg-emerald-500"
-                  : "bg-gray-200 dark:bg-gray-700"
-              } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useLocalEmbedding && selfOllamaServiceReady
+                ? "bg-emerald-500"
+                : "bg-muted"
+                } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  useLocalEmbedding ? "translate-x-6" : "translate-x-1"
-                }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${useLocalEmbedding ? "translate-x-6" : "translate-x-1"
+                  }`}
               />
             </button>
-          </div>
+          </PageSurface>
 
           {processingDocuments.length > 0 && (
-            <div className="mb-6 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/20 p-4">
+            <PageSurface className="mb-4 border-blue-200/80 bg-blue-50/70 dark:border-blue-900 dark:bg-blue-950/20">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
                   <p className="font-medium text-blue-700 dark:text-blue-300">
@@ -1119,21 +1113,20 @@ export default function KnowledgePage() {
                   );
                 })}
               </div>
-            </div>
+            </PageSurface>
           )}
-<div
+          <PageSurface
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-all cursor-pointer ${
-              isDragging
-                ? "border-primary bg-primary/5"
-                : "border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600"
-            }`}
+            className={`mb-4 cursor-pointer border-2 border-dashed text-center transition-all ${isDragging
+              ? "border-primary bg-primary/5"
+              : "border-border/70 hover:border-muted-foreground/40"
+              }`}
             onClick={() => fileInputRef.current?.click()}
           >
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto mb-3">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
               {isUploading ? (
                 <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
               ) : (
@@ -1157,8 +1150,8 @@ export default function KnowledgePage() {
                 </p>
               </>
             )}
-          </div>
-<div className="border border-border rounded-xl overflow-hidden">
+          </PageSurface>
+          <div className="border border-border rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -1213,9 +1206,9 @@ export default function KnowledgePage() {
                             processingStatus[doc.id]?.progress && (
                               <div className="mt-2">
                                 <div className="flex items-center gap-2 text-xs">
-                                  <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                  <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
                                     <div
-                                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                      className="h-full rounded-full bg-blue-500 transition-all duration-500"
                                       style={{
                                         width: `${processingStatus[doc.id].progress!.percent}%`,
                                       }}
@@ -1250,9 +1243,8 @@ export default function KnowledgePage() {
                             handleViewDocument(doc);
                           }}
                           disabled={!canPreview}
-                          className={`p-2 rounded-lg transition-colors ${theme.actionButtonClassName} ${
-                            canPreview ? "" : "opacity-40 cursor-not-allowed"
-                          }`}
+                          className={`p-2 rounded-lg transition-colors ${theme.actionButtonClassName} ${canPreview ? "" : "opacity-40 cursor-not-allowed"
+                            }`}
                           title={
                             canPreview
                               ? t("knowledgeViewParsed")
@@ -1278,7 +1270,7 @@ export default function KnowledgePage() {
               </div>
             )}
           </div>
-        </div>
+        </PageContainer>
       </main>
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
@@ -1301,19 +1293,19 @@ export default function KnowledgePage() {
                       </div>
                     );
                   })()}
-                <div>
-                  <h2 className="font-semibold">{viewingDoc.title}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    <span
-                      className={`mr-1 inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
-                    >
-                      {getDocumentTypeLabel(viewingDoc.file_type)}
-                    </span>
-                    •{" "}
-                    {viewingDoc.file_type.toUpperCase()} •{" "}
-                    {new Date(viewingDoc.created_at).toLocaleDateString()}
-                  </p>
-                </div>
+                  <div>
+                    <h2 className="font-semibold">{viewingDoc.title}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      <span
+                        className={`mr-1 inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
+                      >
+                        {getDocumentTypeLabel(viewingDoc.file_type)}
+                      </span>
+                      •{" "}
+                      {viewingDoc.file_type.toUpperCase()} •{" "}
+                      {new Date(viewingDoc.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               </div>
               {(() => {
@@ -1361,184 +1353,184 @@ export default function KnowledgePage() {
                 </div>
               )}
               <div
-              ref={contentContainerRef}
-              className="flex-1 overflow-y-auto p-6"
-              onScroll={(e) => {
-                const target = e.target as HTMLDivElement;
-                const nearBottom =
-                  target.scrollHeight - target.scrollTop - target.clientHeight <
-                  100;
-                if (
-                  nearBottom &&
-                  docInfo.total_pages &&
-                  !isPdfPreview &&
-                  currentPage < docInfo.total_pages &&
-                  !isLoadingContent &&
-                  !isLoadingMore
-                ) {
-                  void loadMorePages();
-                }
-              }}
-            >
-              {isLoadingContent ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/30 py-14 text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                  <p className="text-sm font-medium text-foreground">
-                    {t("knowledgeLoadingDocumentContent")}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("knowledgePleaseDoNotClosePage")}
-                  </p>
-                </div>
-              ) : isPdfPreview ? (
-                <div className={`h-full min-h-[480px] overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder} ${getDocumentTypeTheme(viewingDoc.file_type).panelBg}`}>
-                  {pdfPreviewUrl ? (
-                    <iframe
-                      src={pdfPreviewUrl}
-                      title={viewingDoc.title}
-                      className="w-full h-full min-h-[480px]"
-                    />
-                  ) : (
-                    <div className="flex h-full min-h-[480px] items-center justify-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              ) : isMarkdownPreview ? (
-                <div className={`max-w-none rounded-2xl border px-5 py-5 ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ href, children }) => (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary underline underline-offset-2"
-                        >
-                          {children}
-                        </a>
-                      ),
-                      code: ({ className, children, ...props }) => {
-                        const isInline = !className?.includes("language-");
-                        return isInline ? (
-                          <code
-                            className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]"
-                            {...props}
+                ref={contentContainerRef}
+                className="flex-1 overflow-y-auto p-6"
+                onScroll={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  const nearBottom =
+                    target.scrollHeight - target.scrollTop - target.clientHeight <
+                    100;
+                  if (
+                    nearBottom &&
+                    docInfo.total_pages &&
+                    !isPdfPreview &&
+                    currentPage < docInfo.total_pages &&
+                    !isLoadingContent &&
+                    !isLoadingMore
+                  ) {
+                    void loadMorePages();
+                  }
+                }}
+              >
+                {isLoadingContent ? (
+                  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/30 py-14 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium text-foreground">
+                      {t("knowledgeLoadingDocumentContent")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("knowledgePleaseDoNotClosePage")}
+                    </p>
+                  </div>
+                ) : isPdfPreview ? (
+                  <div className={`h-full min-h-[480px] overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder} ${getDocumentTypeTheme(viewingDoc.file_type).panelBg}`}>
+                    {pdfPreviewUrl ? (
+                      <iframe
+                        src={pdfPreviewUrl}
+                        title={viewingDoc.title}
+                        className="w-full h-full min-h-[480px]"
+                      />
+                    ) : (
+                      <div className="flex h-full min-h-[480px] items-center justify-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ) : isMarkdownPreview ? (
+                  <div className={`max-w-none rounded-2xl border px-5 py-5 ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ href, children }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline underline-offset-2"
                           >
                             {children}
-                          </code>
-                        ) : (
-                          <pre className="my-4 overflow-x-auto rounded-xl bg-muted p-4">
-                            <code className="font-mono text-sm leading-6" {...props}>
+                          </a>
+                        ),
+                        code: ({ className, children, ...props }) => {
+                          const isInline = !className?.includes("language-");
+                          return isInline ? (
+                            <code
+                              className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]"
+                              {...props}
+                            >
                               {children}
                             </code>
-                          </pre>
-                        );
-                      },
-                      h1: ({ children }) => <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">{children}</h1>,
-                      h2: ({ children }) => <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">{children}</h2>,
-                      h3: ({ children }) => <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">{children}</h3>,
-                      p: ({ children }) => <p className="my-3 leading-7">{children}</p>,
-                      ul: ({ children }) => <ul className="my-4 ml-6 list-disc space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="my-4 ml-6 list-decimal space-y-1">{children}</ol>,
-                      li: ({ children }) => <li className="leading-7">{children}</li>,
-                      table: ({ children }) => (
-                        <div className="my-4 overflow-x-auto">
-                          <table className="w-full border-collapse border border-border">{children}</table>
-                        </div>
-                      ),
-                      th: ({ children }) => (
-                        <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>
-                      ),
-                      td: ({ children }) => (
-                        <td className="border border-border px-3 py-2 align-top">{children}</td>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
-                          {children}
-                        </blockquote>
-                      ),
-                    }}
-                  >
-                    {docContent}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <div className="max-w-none">
-                  {docContent.trim() ? (
-                    <>
-                      {isTableLikeFile(viewingDoc.file_type) ? (
-                        renderTabularPreview(docContent, viewingDoc.file_type)
-                      ) : (
-                        <div className={`overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
-                          <div className="flex items-center justify-between border-b border-inherit px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm font-semibold ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
-                                {getFileTypePreviewCopy(viewingDoc.file_type, locale).title}
-                              </span>
-                              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}>
-                                {getDocumentTypeLabel(viewingDoc.file_type)}
-                              </span>
-                            </div>
-                          </div>
-                          <pre className={`whitespace-pre-wrap text-sm leading-relaxed px-4 py-4 overflow-x-auto ${[".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(viewingDoc.file_type.toLowerCase()) ? "font-mono tabular-nums" : "font-sans"}`}>
-                            {docContent}
-                          </pre>
-                        </div>
-                      )}
-                      {docInfo.total_pages && currentPage < docInfo.total_pages && (
-                        <div className="flex flex-col items-center justify-center py-6 gap-2">
-                          {isLoadingMore ? (
-                            <>
-                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">
-                                {t("knowledgeLoadingMoreContent")}
-                              </span>
-                            </>
                           ) : (
-                            <button
-                              onClick={() => void loadMorePages()}
-                              className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
-                            >
-                              {t("knowledgeLoadNextBatch")}
-                            </button>
-                          )}
+                            <pre className="my-4 overflow-x-auto rounded-xl bg-muted p-4">
+                              <code className="font-mono text-sm leading-6" {...props}>
+                                {children}
+                              </code>
+                            </pre>
+                          );
+                        },
+                        h1: ({ children }) => <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">{children}</h1>,
+                        h2: ({ children }) => <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">{children}</h2>,
+                        h3: ({ children }) => <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">{children}</h3>,
+                        p: ({ children }) => <p className="my-3 leading-7">{children}</p>,
+                        ul: ({ children }) => <ul className="my-4 ml-6 list-disc space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="my-4 ml-6 list-decimal space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="leading-7">{children}</li>,
+                        table: ({ children }) => (
+                          <div className="my-4 overflow-x-auto">
+                            <table className="w-full border-collapse border border-border">{children}</table>
+                          </div>
+                        ),
+                        th: ({ children }) => (
+                          <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="border border-border px-3 py-2 align-top">{children}</td>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
+                            {children}
+                          </blockquote>
+                        ),
+                      }}
+                    >
+                      {docContent}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="max-w-none">
+                    {docContent.trim() ? (
+                      <>
+                        {isTableLikeFile(viewingDoc.file_type) ? (
+                          renderTabularPreview(docContent, viewingDoc.file_type)
+                        ) : (
+                          <div className={`overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                            <div className="flex items-center justify-between border-b border-inherit px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm font-semibold ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
+                                  {getFileTypePreviewCopy(viewingDoc.file_type, locale).title}
+                                </span>
+                                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}>
+                                  {getDocumentTypeLabel(viewingDoc.file_type)}
+                                </span>
+                              </div>
+                            </div>
+                            <pre className={`whitespace-pre-wrap text-sm leading-relaxed px-4 py-4 overflow-x-auto ${[".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(viewingDoc.file_type.toLowerCase()) ? "font-mono tabular-nums" : "font-sans"}`}>
+                              {docContent}
+                            </pre>
+                          </div>
+                        )}
+                        {docInfo.total_pages && currentPage < docInfo.total_pages && (
+                          <div className="flex flex-col items-center justify-center py-6 gap-2">
+                            {isLoadingMore ? (
+                              <>
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">
+                                  {t("knowledgeLoadingMoreContent")}
+                                </span>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => void loadMorePages()}
+                                className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
+                              >
+                                {t("knowledgeLoadNextBatch")}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-12 text-center ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                        <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-background ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
+                          {(() => {
+                            const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
+                            return <DocumentIcon className="h-6 w-6" />;
+                          })()}
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-12 text-center ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
-                      <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-background ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
-                        {(() => {
-                          const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
-                          return <DocumentIcon className="h-6 w-6" />;
-                        })()}
+                        <h3 className="text-sm font-medium text-foreground">
+                          {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyTitle}
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyHint}
+                        </p>
                       </div>
-                      <h3 className="text-sm font-medium text-foreground">
-                        {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyTitle}
-                      </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyHint}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
-                {docInfo.total_pages &&
-                docInfo.total_pages > 1 &&
-                !isPdfPreview && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {t("knowledgeLoadedPages", {
-                        current: Math.min(currentPage, docInfo.total_pages),
-                        total: docInfo.total_pages,
-                      })}
-                    </span>
+                    )}
                   </div>
                 )}
+              </div>
+              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
+                {docInfo.total_pages &&
+                  docInfo.total_pages > 1 &&
+                  !isPdfPreview && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {t("knowledgeLoadedPages", {
+                          current: Math.min(currentPage, docInfo.total_pages),
+                          total: docInfo.total_pages,
+                        })}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex items-center gap-2 ml-auto">
                   <button
                     onClick={closeViewModal}
