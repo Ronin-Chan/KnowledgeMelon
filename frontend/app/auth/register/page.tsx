@@ -47,12 +47,23 @@ export default function RegisterPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(getErrorMessage(data?.detail, locale === "zh" ? "注册失败" : "Registration failed"));
+        throw new Error(
+          getErrorMessage(
+            data?.detail,
+            locale === "zh" ? "注册失败" : "Registration failed",
+          ),
+        );
       }
       setAuth(data.access_token, data.user);
       router.push("/settings");
     } catch (err) {
-      setError(err instanceof Error ? err.message : locale === "zh" ? "注册失败" : "Registration failed");
+      setError(
+        err instanceof Error
+          ? err.message
+          : locale === "zh"
+            ? "注册失败"
+            : "Registration failed",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +119,9 @@ export default function RegisterPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder={locale === "zh" ? "你的邮箱地址" : "your@email.com"}
+                  placeholder={
+                    locale === "zh" ? "你的邮箱地址" : "your@email.com"
+                  }
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className="border-border bg-background text-foreground placeholder:text-muted-foreground"
@@ -123,7 +136,9 @@ export default function RegisterPage() {
                   id="password"
                   type="password"
                   minLength={8}
-                  placeholder={locale === "zh" ? "至少 8 个字符" : "At least 8 characters"}
+                  placeholder={
+                    locale === "zh" ? "至少 8 个字符" : "At least 8 characters"
+                  }
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="border-border bg-background text-foreground placeholder:text-muted-foreground"
@@ -136,13 +151,22 @@ export default function RegisterPage() {
                 </div>
               )}
               <Button className="w-full" disabled={isLoading} type="submit">
-                {isLoading ? (locale === "zh" ? "创建账户中..." : "Creating account...") : locale === "zh" ? "注册" : "Register"}
+                {isLoading
+                  ? locale === "zh"
+                    ? "创建账户中..."
+                    : "Creating account..."
+                  : locale === "zh"
+                    ? "注册"
+                    : "Register"}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground md:text-left">
               {locale === "zh" ? "已有账户？" : "Already have an account?"}{" "}
-              <Link className="font-medium text-foreground underline underline-offset-4" href="/auth/login">
+              <Link
+                className="font-medium text-foreground underline underline-offset-4"
+                href="/auth/login"
+              >
                 {locale === "zh" ? "登录" : "Log in"}
               </Link>
             </p>

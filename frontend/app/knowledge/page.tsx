@@ -32,7 +32,11 @@ import {
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
-import { PageContainer, PageHeader, PageSurface } from "@/components/page-shell";
+import {
+  PageContainer,
+  PageHeader,
+  PageSurface,
+} from "@/components/page-shell";
 import { useT } from "@/lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -129,7 +133,8 @@ export default function KnowledgePage() {
   useEffect(() => {
     tRef.current = t;
   }, [t]);
-  const provider = SUPPORTED_MODELS.find((m) => m.id === model)?.provider || "openai";
+  const provider =
+    SUPPORTED_MODELS.find((m) => m.id === model)?.provider || "openai";
   const isPdfPreview = viewingDoc?.file_type === ".pdf";
   const isMarkdownPreview = viewingDoc?.file_type === ".md";
   const embeddingConfig = resolveEmbeddingConfig({
@@ -173,7 +178,10 @@ export default function KnowledgePage() {
 
     window.addEventListener("knowledge-documents-updated", refreshDocuments);
     return () =>
-      window.removeEventListener("knowledge-documents-updated", refreshDocuments);
+      window.removeEventListener(
+        "knowledge-documents-updated",
+        refreshDocuments,
+      );
   }, [fetchDocuments]);
   useEffect(() => {
     const checkSelfOllama = async () => {
@@ -247,7 +255,12 @@ export default function KnowledgePage() {
       return;
     }
     const fileExt = file.name.split(".").pop()?.toLowerCase();
-    if (!fileExt || !SUPPORTED_FILE_EXTENSIONS.includes(fileExt as (typeof SUPPORTED_FILE_EXTENSIONS)[number])) {
+    if (
+      !fileExt ||
+      !SUPPORTED_FILE_EXTENSIONS.includes(
+        fileExt as (typeof SUPPORTED_FILE_EXTENSIONS)[number],
+      )
+    ) {
       showToast(
         "error",
         t("knowledgeUnsupportedFileType", {
@@ -273,10 +286,10 @@ export default function KnowledgePage() {
       setUploadProgress(
         options?.currentIndex && options?.totalCount
           ? t("knowledgeUploadBatchProgress", {
-            current: options.currentIndex,
-            total: options.totalCount,
-            name: file.name,
-          })
+              current: options.currentIndex,
+              total: options.totalCount,
+              name: file.name,
+            })
           : t("fileStatusParsing"),
       );
       const params = new URLSearchParams();
@@ -366,16 +379,16 @@ export default function KnowledgePage() {
       const summary =
         failureCount === 0
           ? t("knowledgeUploadBatchComplete", {
-            success: successCount,
-            total: totalCount,
-          })
+              success: successCount,
+              total: totalCount,
+            })
           : `${t("knowledgeUploadBatchComplete", {
-            success: successCount,
-            total: totalCount,
-          })}，${t("knowledgeUploadBatchPartial", {
-            success: successCount,
-            failed: failureCount,
-          })}`;
+              success: successCount,
+              total: totalCount,
+            })}，${t("knowledgeUploadBatchPartial", {
+              success: successCount,
+              failed: failureCount,
+            })}`;
       showToast(failureCount === 0 ? "success" : "info", summary);
 
       if (perFileErrors.length > 0) {
@@ -440,7 +453,10 @@ export default function KnowledgePage() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        showToast("success", t("knowledgeDownloadStarted", { name: doc.title }));
+        showToast(
+          "success",
+          t("knowledgeDownloadStarted", { name: doc.title }),
+        );
       } else {
         showToast("error", t("knowledgeDownloadFailed"));
       }
@@ -812,7 +828,9 @@ export default function KnowledgePage() {
     return getFileTypeTheme(fileType);
   };
 
-  const processingDocuments = documents.filter((doc) => doc.status === "processing");
+  const processingDocuments = documents.filter(
+    (doc) => doc.status === "processing",
+  );
 
   const isTableLikeFile = (fileType: string) => {
     const normalizedType = fileType.toLowerCase();
@@ -866,7 +884,14 @@ export default function KnowledgePage() {
     }
 
     pushSection();
-    return sections.length > 0 ? sections : [{ title: locale === "zh" ? "内容" : "Content", rows: lines.map(splitRow) }];
+    return sections.length > 0
+      ? sections
+      : [
+          {
+            title: locale === "zh" ? "内容" : "Content",
+            rows: lines.map(splitRow),
+          },
+        ];
   };
 
   const renderTabularPreview = (content: string, fileType: string) => {
@@ -904,27 +929,33 @@ export default function KnowledgePage() {
                   {section.rows.map((row, rowIndex) => (
                     <div
                       key={`${section.title}-${sectionIndex}-row-${rowIndex}`}
-                      className={`grid border-b border-border/60 last:border-b-0 ${rowIndex === 0
-                        ? "bg-background/80 font-semibold"
-                        : rowIndex % 2 === 0
-                          ? "bg-background/55"
-                          : "bg-background/35"
-                        }`}
+                      className={`grid border-b border-border/60 last:border-b-0 ${
+                        rowIndex === 0
+                          ? "bg-background/80 font-semibold"
+                          : rowIndex % 2 === 0
+                            ? "bg-background/55"
+                            : "bg-background/35"
+                      }`}
                       style={{
                         gridTemplateColumns: `repeat(${maxColumns}, minmax(140px, 1fr))`,
                       }}
                     >
-                      {Array.from({ length: maxColumns }).map((_, cellIndex) => (
-                        <div
-                          key={`${section.title}-${sectionIndex}-row-${rowIndex}-cell-${cellIndex}`}
-                          className={`min-w-0 border-r border-border/60 px-4 py-3 text-sm last:border-r-0 ${rowIndex === 0 ? "text-foreground" : "text-muted-foreground"
+                      {Array.from({ length: maxColumns }).map(
+                        (_, cellIndex) => (
+                          <div
+                            key={`${section.title}-${sectionIndex}-row-${rowIndex}-cell-${cellIndex}`}
+                            className={`min-w-0 border-r border-border/60 px-4 py-3 text-sm last:border-r-0 ${
+                              rowIndex === 0
+                                ? "text-foreground"
+                                : "text-muted-foreground"
                             }`}
-                        >
-                          <span className="block truncate">
-                            {row[cellIndex] ?? ""}
-                          </span>
-                        </div>
-                      ))}
+                          >
+                            <span className="block truncate">
+                              {row[cellIndex] ?? ""}
+                            </span>
+                          </div>
+                        ),
+                      )}
                     </div>
                   ))}
                 </div>
@@ -942,12 +973,13 @@ export default function KnowledgePage() {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${toast.type === "success"
-              ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
-              : toast.type === "error"
-                ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
-                : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
-              }`}
+            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
+              toast.type === "success"
+                ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
+                : toast.type === "error"
+                  ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+                  : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
+            }`}
           >
             {toast.type === "success" && <Check className="h-4 w-4" />}
             {toast.type === "error" && <AlertCircle className="h-4 w-4" />}
@@ -1021,12 +1053,13 @@ export default function KnowledgePage() {
           <PageSurface className="mb-4 mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${selfOllamaServiceReady
-                  ? selfOllamaModelReady
-                    ? "bg-emerald-500"
-                    : "bg-amber-500"
-                  : "bg-muted-foreground/50"
-                  }`}
+                className={`w-2 h-2 rounded-full ${
+                  selfOllamaServiceReady
+                    ? selfOllamaModelReady
+                      ? "bg-emerald-500"
+                      : "bg-amber-500"
+                    : "bg-muted-foreground/50"
+                }`}
               />
               <div>
                 <p className="text-sm font-medium">
@@ -1044,14 +1077,16 @@ export default function KnowledgePage() {
             <button
               onClick={() => setUseLocalEmbedding(!useLocalEmbedding)}
               disabled={!selfOllamaServiceReady}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useLocalEmbedding && selfOllamaServiceReady
-                ? "bg-emerald-500"
-                : "bg-muted"
-                } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                useLocalEmbedding && selfOllamaServiceReady
+                  ? "bg-emerald-500"
+                  : "bg-muted"
+              } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${useLocalEmbedding ? "translate-x-6" : "translate-x-1"
-                  }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                  useLocalEmbedding ? "translate-x-6" : "translate-x-1"
+                }`}
               />
             </button>
           </PageSurface>
@@ -1086,7 +1121,9 @@ export default function KnowledgePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className={`truncate font-semibold ${theme.iconText}`}>
+                            <span
+                              className={`truncate font-semibold ${theme.iconText}`}
+                            >
                               {doc.title}
                             </span>
                             <span
@@ -1095,15 +1132,21 @@ export default function KnowledgePage() {
                               {getDocumentTypeLabel(doc.file_type)}
                             </span>
                           </div>
-                          <p className={`mt-1 text-xs ${theme.iconText} opacity-80`}>
+                          <p
+                            className={`mt-1 text-xs ${theme.iconText} opacity-80`}
+                          >
                             {message || t("knowledgeLoadingDocumentContent")}
                           </p>
                         </div>
-                        <div className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${theme.iconText} ${theme.panelBg}`}>
+                        <div
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${theme.iconText} ${theme.panelBg}`}
+                        >
                           {progress?.percent ?? 0}%
                         </div>
                       </div>
-                      <div className={`mt-3 h-2 overflow-hidden rounded-full bg-background/60`}>
+                      <div
+                        className={`mt-3 h-2 overflow-hidden rounded-full bg-background/60`}
+                      >
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${theme.progressBar}`}
                           style={{ width: `${progress?.percent ?? 0}%` }}
@@ -1120,10 +1163,11 @@ export default function KnowledgePage() {
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className={`mb-4 cursor-pointer border-2 border-dashed text-center transition-all ${isDragging
-              ? "border-primary bg-primary/5"
-              : "border-border/70 hover:border-muted-foreground/40"
-              }`}
+            className={`mb-4 cursor-pointer border-2 border-dashed text-center transition-all ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border/70 hover:border-muted-foreground/40"
+            }`}
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
@@ -1155,14 +1199,18 @@ export default function KnowledgePage() {
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-2">{t("knowledgeLoading")}</p>
+                <p className="text-muted-foreground mt-2">
+                  {t("knowledgeLoading")}
+                </p>
               </div>
             ) : documents.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto mb-4">
                   <FileText className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium mb-1">{t("knowledgeNoDocuments")}</h3>
+                <h3 className="font-medium mb-1">
+                  {t("knowledgeNoDocuments")}
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   {t("knowledgeNoDocumentsHint")}
                 </p>
@@ -1182,7 +1230,9 @@ export default function KnowledgePage() {
                         <div
                           className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${theme.iconBg}`}
                         >
-                          <DocumentIcon className={`h-5 w-5 ${theme.iconText}`} />
+                          <DocumentIcon
+                            className={`h-5 w-5 ${theme.iconText}`}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{doc.title}</p>
@@ -1195,7 +1245,9 @@ export default function KnowledgePage() {
                             <span>•</span>
                             <span>{doc.file_type.toUpperCase()}</span>
                             <span>•</span>
-                            <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                            <span>
+                              {new Date(doc.created_at).toLocaleDateString()}
+                            </span>
                             <span>•</span>
                             <span className="flex items-center gap-1">
                               {getStatusIcon(doc.status)}
@@ -1215,7 +1267,8 @@ export default function KnowledgePage() {
                                     />
                                   </div>
                                   <span className="text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                                    {processingStatus[doc.id].progress!.percent}%
+                                    {processingStatus[doc.id].progress!.percent}
+                                    %
                                   </span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -1243,8 +1296,9 @@ export default function KnowledgePage() {
                             handleViewDocument(doc);
                           }}
                           disabled={!canPreview}
-                          className={`p-2 rounded-lg transition-colors ${theme.actionButtonClassName} ${canPreview ? "" : "opacity-40 cursor-not-allowed"
-                            }`}
+                          className={`p-2 rounded-lg transition-colors ${theme.actionButtonClassName} ${
+                            canPreview ? "" : "opacity-40 cursor-not-allowed"
+                          }`}
                           title={
                             canPreview
                               ? t("knowledgeViewParsed")
@@ -1272,7 +1326,10 @@ export default function KnowledgePage() {
           </div>
         </PageContainer>
       </main>
-      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
+      <Dialog
+        open={!!viewingDoc}
+        onOpenChange={(open) => !open && closeViewModal()}
+      >
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
           {viewingDoc && (
             <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
@@ -1285,10 +1342,14 @@ export default function KnowledgePage() {
               <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-3">
                   {(() => {
-                    const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
+                    const DocumentIcon = getDocumentTypeIcon(
+                      viewingDoc.file_type,
+                    );
                     const theme = getDocumentTypeTheme(viewingDoc.file_type);
                     return (
-                      <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme.iconBg}`}>
+                      <div
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center ${theme.iconBg}`}
+                      >
                         <DocumentIcon className={`h-5 w-5 ${theme.iconText}`} />
                       </div>
                     );
@@ -1301,21 +1362,27 @@ export default function KnowledgePage() {
                       >
                         {getDocumentTypeLabel(viewingDoc.file_type)}
                       </span>
-                      •{" "}
-                      {viewingDoc.file_type.toUpperCase()} •{" "}
+                      • {viewingDoc.file_type.toUpperCase()} •{" "}
                       {new Date(viewingDoc.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               </div>
               {(() => {
-                const previewCopy = getFileTypePreviewCopy(viewingDoc.file_type, locale);
+                const previewCopy = getFileTypePreviewCopy(
+                  viewingDoc.file_type,
+                  locale,
+                );
                 const theme = getDocumentTypeTheme(viewingDoc.file_type);
                 const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
                 return (
-                  <div className={`mx-6 mt-4 rounded-2xl border px-4 py-4 ${theme.panelBg} ${theme.panelBorder}`}>
+                  <div
+                    className={`mx-6 mt-4 rounded-2xl border px-4 py-4 ${theme.panelBg} ${theme.panelBorder}`}
+                  >
                     <div className="flex items-start gap-3">
-                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.iconBg}`}>
+                      <div
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.iconBg}`}
+                      >
                         <DocumentIcon className={`h-6 w-6 ${theme.iconText}`} />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -1325,7 +1392,9 @@ export default function KnowledgePage() {
                           >
                             {getDocumentTypeLabel(viewingDoc.file_type)}
                           </span>
-                          <span className={`text-sm font-semibold ${theme.iconText}`}>
+                          <span
+                            className={`text-sm font-semibold ${theme.iconText}`}
+                          >
                             {previewCopy.title}
                           </span>
                         </div>
@@ -1358,7 +1427,9 @@ export default function KnowledgePage() {
                 onScroll={(e) => {
                   const target = e.target as HTMLDivElement;
                   const nearBottom =
-                    target.scrollHeight - target.scrollTop - target.clientHeight <
+                    target.scrollHeight -
+                      target.scrollTop -
+                      target.clientHeight <
                     100;
                   if (
                     nearBottom &&
@@ -1383,7 +1454,9 @@ export default function KnowledgePage() {
                     </p>
                   </div>
                 ) : isPdfPreview ? (
-                  <div className={`h-full min-h-[480px] overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder} ${getDocumentTypeTheme(viewingDoc.file_type).panelBg}`}>
+                  <div
+                    className={`h-full min-h-[480px] overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder} ${getDocumentTypeTheme(viewingDoc.file_type).panelBg}`}
+                  >
                     {pdfPreviewUrl ? (
                       <iframe
                         src={pdfPreviewUrl}
@@ -1397,7 +1470,9 @@ export default function KnowledgePage() {
                     )}
                   </div>
                 ) : isMarkdownPreview ? (
-                  <div className={`max-w-none rounded-2xl border px-5 py-5 ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                  <div
+                    className={`max-w-none rounded-2xl border px-5 py-5 ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}
+                  >
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -1422,29 +1497,62 @@ export default function KnowledgePage() {
                             </code>
                           ) : (
                             <pre className="my-4 overflow-x-auto rounded-xl bg-muted p-4">
-                              <code className="font-mono text-sm leading-6" {...props}>
+                              <code
+                                className="font-mono text-sm leading-6"
+                                {...props}
+                              >
                                 {children}
                               </code>
                             </pre>
                           );
                         },
-                        h1: ({ children }) => <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">{children}</h1>,
-                        h2: ({ children }) => <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">{children}</h2>,
-                        h3: ({ children }) => <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">{children}</h3>,
-                        p: ({ children }) => <p className="my-3 leading-7">{children}</p>,
-                        ul: ({ children }) => <ul className="my-4 ml-6 list-disc space-y-1">{children}</ul>,
-                        ol: ({ children }) => <ol className="my-4 ml-6 list-decimal space-y-1">{children}</ol>,
-                        li: ({ children }) => <li className="leading-7">{children}</li>,
+                        h1: ({ children }) => (
+                          <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">
+                            {children}
+                          </h3>
+                        ),
+                        p: ({ children }) => (
+                          <p className="my-3 leading-7">{children}</p>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="my-4 ml-6 list-disc space-y-1">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="my-4 ml-6 list-decimal space-y-1">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="leading-7">{children}</li>
+                        ),
                         table: ({ children }) => (
                           <div className="my-4 overflow-x-auto">
-                            <table className="w-full border-collapse border border-border">{children}</table>
+                            <table className="w-full border-collapse border border-border">
+                              {children}
+                            </table>
                           </div>
                         ),
                         th: ({ children }) => (
-                          <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>
+                          <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">
+                            {children}
+                          </th>
                         ),
                         td: ({ children }) => (
-                          <td className="border border-border px-3 py-2 align-top">{children}</td>
+                          <td className="border border-border px-3 py-2 align-top">
+                            {children}
+                          </td>
                         ),
                         blockquote: ({ children }) => (
                           <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
@@ -1463,55 +1571,81 @@ export default function KnowledgePage() {
                         {isTableLikeFile(viewingDoc.file_type) ? (
                           renderTabularPreview(docContent, viewingDoc.file_type)
                         ) : (
-                          <div className={`overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                          <div
+                            className={`overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}
+                          >
                             <div className="flex items-center justify-between border-b border-inherit px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <span className={`text-sm font-semibold ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
-                                  {getFileTypePreviewCopy(viewingDoc.file_type, locale).title}
+                                <span
+                                  className={`text-sm font-semibold ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}
+                                >
+                                  {
+                                    getFileTypePreviewCopy(
+                                      viewingDoc.file_type,
+                                      locale,
+                                    ).title
+                                  }
                                 </span>
-                                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}>
+                                <span
+                                  className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
+                                >
                                   {getDocumentTypeLabel(viewingDoc.file_type)}
                                 </span>
                               </div>
                             </div>
-                            <pre className={`whitespace-pre-wrap text-sm leading-relaxed px-4 py-4 overflow-x-auto ${[".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(viewingDoc.file_type.toLowerCase()) ? "font-mono tabular-nums" : "font-sans"}`}>
+                            <pre
+                              className={`whitespace-pre-wrap text-sm leading-relaxed px-4 py-4 overflow-x-auto ${[".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(viewingDoc.file_type.toLowerCase()) ? "font-mono tabular-nums" : "font-sans"}`}
+                            >
                               {docContent}
                             </pre>
                           </div>
                         )}
-                        {docInfo.total_pages && currentPage < docInfo.total_pages && (
-                          <div className="flex flex-col items-center justify-center py-6 gap-2">
-                            {isLoadingMore ? (
-                              <>
-                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                  {t("knowledgeLoadingMoreContent")}
-                                </span>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => void loadMorePages()}
-                                className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
-                              >
-                                {t("knowledgeLoadNextBatch")}
-                              </button>
-                            )}
-                          </div>
-                        )}
+                        {docInfo.total_pages &&
+                          currentPage < docInfo.total_pages && (
+                            <div className="flex flex-col items-center justify-center py-6 gap-2">
+                              {isLoadingMore ? (
+                                <>
+                                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">
+                                    {t("knowledgeLoadingMoreContent")}
+                                  </span>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => void loadMorePages()}
+                                  className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
+                                >
+                                  {t("knowledgeLoadNextBatch")}
+                                </button>
+                              )}
+                            </div>
+                          )}
                       </>
                     ) : (
-                      <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-12 text-center ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
-                        <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-background ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
+                      <div
+                        className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-12 text-center ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}
+                      >
+                        <div
+                          className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-background ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}
+                        >
                           {(() => {
-                            const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
+                            const DocumentIcon = getDocumentTypeIcon(
+                              viewingDoc.file_type,
+                            );
                             return <DocumentIcon className="h-6 w-6" />;
                           })()}
                         </div>
                         <h3 className="text-sm font-medium text-foreground">
-                          {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyTitle}
+                          {
+                            getFileTypePreviewCopy(viewingDoc.file_type, locale)
+                              .emptyTitle
+                          }
                         </h3>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyHint}
+                          {
+                            getFileTypePreviewCopy(viewingDoc.file_type, locale)
+                              .emptyHint
+                          }
                         </p>
                       </div>
                     )}
@@ -1575,9 +1709,3 @@ export default function KnowledgePage() {
     </AppShell>
   );
 }
-
-
-
-
-
-

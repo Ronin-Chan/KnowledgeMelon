@@ -47,7 +47,12 @@ export default function LoginPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(getErrorMessage(data?.detail, locale === "zh" ? "登录失败" : "Login failed"));
+        throw new Error(
+          getErrorMessage(
+            data?.detail,
+            locale === "zh" ? "登录失败" : "Login failed",
+          ),
+        );
       }
 
       setAuth(data.access_token, data.user);
@@ -55,18 +60,30 @@ export default function LoginPage() {
       if (keysResponse.ok) {
         const keys = await keysResponse.json();
         useSettingsStore.getState().replaceProviderSettings(
-          keys.map((item: { provider: string; api_key: string; base_url: string }) => ({
-            provider: item.provider,
-            apiKey: item.api_key,
-            baseUrl: item.base_url,
-          })),
+          keys.map(
+            (item: {
+              provider: string;
+              api_key: string;
+              base_url: string;
+            }) => ({
+              provider: item.provider,
+              apiKey: item.api_key,
+              baseUrl: item.base_url,
+            }),
+          ),
         );
       } else {
         useSettingsStore.getState().replaceProviderSettings([]);
       }
       router.push("/chat");
     } catch (err) {
-      setError(err instanceof Error ? err.message : locale === "zh" ? "登录失败" : "Login failed");
+      setError(
+        err instanceof Error
+          ? err.message
+          : locale === "zh"
+            ? "登录失败"
+            : "Login failed",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +126,9 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder={locale === "zh" ? "你的邮箱地址" : "your@email.com"}
+                  placeholder={
+                    locale === "zh" ? "你的邮箱地址" : "your@email.com"
+                  }
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className="border-border bg-background text-foreground placeholder:text-muted-foreground"
@@ -123,7 +142,9 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder={locale === "zh" ? "请输入密码" : "Enter your password"}
+                  placeholder={
+                    locale === "zh" ? "请输入密码" : "Enter your password"
+                  }
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="border-border bg-background text-foreground placeholder:text-muted-foreground"
@@ -136,13 +157,22 @@ export default function LoginPage() {
                 </div>
               )}
               <Button className="w-full" disabled={isLoading} type="submit">
-                {isLoading ? (locale === "zh" ? "登录中..." : "Logging in...") : locale === "zh" ? "登录" : "Login"}
+                {isLoading
+                  ? locale === "zh"
+                    ? "登录中..."
+                    : "Logging in..."
+                  : locale === "zh"
+                    ? "登录"
+                    : "Login"}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground md:text-left">
               {locale === "zh" ? "新用户？" : "New here?"}{" "}
-              <Link className="font-medium text-foreground underline underline-offset-4" href="/auth/register">
+              <Link
+                className="font-medium text-foreground underline underline-offset-4"
+                href="/auth/register"
+              >
                 {locale === "zh" ? "创建账户" : "Create an account"}
               </Link>
             </p>

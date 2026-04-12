@@ -20,7 +20,11 @@ import { AppShell } from "@/components/app-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
-import { PageContainer, PageHeader, PageSurface } from "@/components/page-shell";
+import {
+  PageContainer,
+  PageHeader,
+  PageSurface,
+} from "@/components/page-shell";
 import { useT } from "@/lib/i18n";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -60,11 +64,17 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("models");
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
-  const [serverSyncedProviders, setServerSyncedProviders] = useState<string[]>([]);
+  const [serverSyncedProviders, setServerSyncedProviders] = useState<string[]>(
+    [],
+  );
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  const [expandedProvider, setExpandedProvider] = useState<string | null>(selectedProvider || "openai");
-  const [storageAction, setStorageAction] = useState<Record<string, "save" | "remove" | null>>({});
+  const [expandedProvider, setExpandedProvider] = useState<string | null>(
+    selectedProvider || "openai",
+  );
+  const [storageAction, setStorageAction] = useState<
+    Record<string, "save" | "remove" | null>
+  >({});
 
   const showToast = useCallback((type: Toast["type"], message: string) => {
     const id = Date.now().toString();
@@ -125,7 +135,8 @@ export default function SettingsPage() {
         prev.includes(providerId) ? prev : [...prev, providerId],
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save server copy.";
+      const message =
+        error instanceof Error ? error.message : "Failed to save server copy.";
       setSyncStatus(message);
       showToast("error", message);
     } finally {
@@ -151,9 +162,14 @@ export default function SettingsPage() {
 
       setSyncStatus("server copy removed.");
       showToast("info", "server copy removed.");
-      setServerSyncedProviders((prev) => prev.filter((item) => item !== providerId));
+      setServerSyncedProviders((prev) =>
+        prev.filter((item) => item !== providerId),
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to remove server copy.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to remove server copy.";
       setSyncStatus(message);
       showToast("error", message);
     } finally {
@@ -187,30 +203,34 @@ export default function SettingsPage() {
         <PageContainer>
           <PageHeader
             title={t("settingsTitle")}
-            description={locale === "zh" ? "统一管理模型、提供商、外观与语言。" : "Manage models, providers, appearance, and language in one place."}
+            description={
+              locale === "zh"
+                ? "统一管理模型、提供商、外观与语言。"
+                : "Manage models, providers, appearance, and language in one place."
+            }
           />
 
           <PageSurface className="mt-8 p-2">
-          <div className="flex gap-2 overflow-x-auto">
-            {[
-              ["models", t("settingsModels")],
-              ["providers", t("settingsApi")],
-              ["appearance", t("settingsAppearance")],
-              ["language", t("settingsLanguage")],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                onClick={() => setActiveTab(value as SettingsTab)}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === value
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+            <div className="flex gap-2 overflow-x-auto">
+              {[
+                ["models", t("settingsModels")],
+                ["providers", t("settingsApi")],
+                ["appearance", t("settingsAppearance")],
+                ["language", t("settingsLanguage")],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setActiveTab(value as SettingsTab)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === value
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </PageSurface>
 
           {activeTab === "models" && (
@@ -255,7 +275,9 @@ export default function SettingsPage() {
 
               <div className="space-y-3">
                 {(selectedProvider
-                  ? localizedModels.filter((item) => item.provider === selectedProvider)
+                  ? localizedModels.filter(
+                      (item) => item.provider === selectedProvider,
+                    )
                   : localizedModels
                 ).map((item) => (
                   <button
@@ -271,7 +293,11 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{item.name}</span>
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          {PROVIDERS.find((provider) => provider.id === item.provider)?.name}
+                          {
+                            PROVIDERS.find(
+                              (provider) => provider.id === item.provider,
+                            )?.name
+                          }
                         </span>
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
@@ -305,9 +331,16 @@ export default function SettingsPage() {
 
               <div className="space-y-4">
                 {PROVIDERS.map((provider) => (
-                  <div key={provider.id} className="overflow-hidden rounded-xl border border-border">
+                  <div
+                    key={provider.id}
+                    className="overflow-hidden rounded-xl border border-border"
+                  >
                     <button
-                      onClick={() => setExpandedProvider(expandedProvider === provider.id ? null : provider.id)}
+                      onClick={() =>
+                        setExpandedProvider(
+                          expandedProvider === provider.id ? null : provider.id,
+                        )
+                      }
                       className="flex w-full items-center justify-between p-4 transition-colors hover:bg-muted/50"
                     >
                       <div className="flex items-center gap-3">
@@ -323,19 +356,25 @@ export default function SettingsPage() {
                           </span>
                         )}
                       </div>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedProvider === provider.id ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${expandedProvider === provider.id ? "rotate-180" : ""}`}
+                      />
                     </button>
 
                     {expandedProvider === provider.id && (
                       <div className="space-y-4 border-t border-border p-4">
                         <div className="space-y-2">
-                          <Label htmlFor={`key-${provider.id}`}>{provider.keyName}</Label>
+                          <Label htmlFor={`key-${provider.id}`}>
+                            {provider.keyName}
+                          </Label>
                           <div className="relative">
                             <Input
                               id={`key-${provider.id}`}
                               type={showKey[provider.id] ? "text" : "password"}
                               value={apiKeys[provider.id] || ""}
-                              onChange={(event) => setApiKey(provider.id, event.target.value)}
+                              onChange={(event) =>
+                                setApiKey(provider.id, event.target.value)
+                              }
                               placeholder={provider.keyName}
                               className="pr-10"
                             />
@@ -344,19 +383,27 @@ export default function SettingsPage() {
                               onClick={() => toggleShowKey(provider.id)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
-                              {showKey[provider.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showKey[provider.id] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor={`url-${provider.id}`}>{t("providerBaseUrlOptional")}</Label>
+                          <Label htmlFor={`url-${provider.id}`}>
+                            {t("providerBaseUrlOptional")}
+                          </Label>
                           <div className="relative">
                             <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               id={`url-${provider.id}`}
                               value={baseUrls[provider.id] || ""}
-                              onChange={(event) => setBaseUrl(provider.id, event.target.value)}
+                              onChange={(event) =>
+                                setBaseUrl(provider.id, event.target.value)
+                              }
                               placeholder={provider.baseUrlPlaceholder}
                               className="pl-9"
                             />
@@ -375,8 +422,13 @@ export default function SettingsPage() {
                           <div className="mt-3 flex flex-wrap gap-2">
                             <button
                               type="button"
-                              onClick={() => void syncProviderToServer(provider.id)}
-                              disabled={storageAction[provider.id] !== undefined && storageAction[provider.id] !== null}
+                              onClick={() =>
+                                void syncProviderToServer(provider.id)
+                              }
+                              disabled={
+                                storageAction[provider.id] !== undefined &&
+                                storageAction[provider.id] !== null
+                              }
                               className="rounded-lg bg-foreground px-3 py-2 text-sm text-background"
                             >
                               {storageAction[provider.id] === "save"
@@ -389,8 +441,13 @@ export default function SettingsPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => void removeProviderFromServer(provider.id)}
-                              disabled={storageAction[provider.id] !== undefined && storageAction[provider.id] !== null}
+                              onClick={() =>
+                                void removeProviderFromServer(provider.id)
+                              }
+                              disabled={
+                                storageAction[provider.id] !== undefined &&
+                                storageAction[provider.id] !== null
+                              }
                               className="rounded-lg border border-border px-3 py-2 text-sm"
                             >
                               {storageAction[provider.id] === "remove"
@@ -410,7 +467,9 @@ export default function SettingsPage() {
               </div>
 
               <div className="mt-8 rounded-xl bg-muted p-4">
-                <h3 className="mb-2 font-medium">{t("settingsCurrentConfig")}</h3>
+                <h3 className="mb-2 font-medium">
+                  {t("settingsCurrentConfig")}
+                </h3>
                 <div className="space-y-1 text-sm">
                   {user && (
                     <p>
@@ -421,22 +480,38 @@ export default function SettingsPage() {
                     </p>
                   )}
                   <p>
-                    <span className="text-muted-foreground">{t("settingsModelLabel")}:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {t("settingsModelLabel")}:
+                    </span>{" "}
                     {getLocalizedModelById(locale, model)?.name || model}
                   </p>
                   <p>
-                    <span className="text-muted-foreground">{t("settingsProvider")}:</span>{" "}
-                    {PROVIDERS.find((provider) => provider.id === selectedProvider)?.name}
+                    <span className="text-muted-foreground">
+                      {t("settingsProvider")}:
+                    </span>{" "}
+                    {
+                      PROVIDERS.find(
+                        (provider) => provider.id === selectedProvider,
+                      )?.name
+                    }
                   </p>
                   <p>
-                    <span className="text-muted-foreground">{t("settingsApiStatus")}:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {t("settingsApiStatus")}:
+                    </span>{" "}
                     {getEffectiveApiKey() ? (
-                      <span className="text-emerald-600">{t("settingsConfigured")}</span>
+                      <span className="text-emerald-600">
+                        {t("settingsConfigured")}
+                      </span>
                     ) : (
-                      <span className="text-red-500">{t("settingsUnconfigured")}</span>
+                      <span className="text-red-500">
+                        {t("settingsUnconfigured")}
+                      </span>
                     )}
                   </p>
-                  {syncStatus && <p className="pt-2 text-foreground">{syncStatus}</p>}
+                  {syncStatus && (
+                    <p className="pt-2 text-foreground">{syncStatus}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -468,7 +543,9 @@ export default function SettingsPage() {
                       <SunMedium className="h-4 w-4" />
                       {t("themeLight")}
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{t("themeLightDescription")}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {t("themeLightDescription")}
+                    </p>
                   </div>
                   {theme === "light" && <Check className="h-5 w-5" />}
                 </button>
@@ -482,7 +559,9 @@ export default function SettingsPage() {
                       <MoonStar className="h-4 w-4" />
                       {t("themeDark")}
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{t("themeDarkDescription")}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {t("themeDarkDescription")}
+                    </p>
                   </div>
                   {theme === "dark" && <Check className="h-5 w-5" />}
                 </button>
@@ -498,7 +577,9 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-medium">{t("settingsLanguage")}</h2>
-                  <p className="text-sm text-muted-foreground">{t("languageSelectHint")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("languageSelectHint")}
+                  </p>
                 </div>
               </div>
 
@@ -511,7 +592,9 @@ export default function SettingsPage() {
                     <div className="font-medium">{t("languageChinese")}</div>
                     {locale === "zh" && <Check className="h-5 w-5" />}
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{t("languageChineseDescription")}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t("languageChineseDescription")}
+                  </p>
                 </button>
 
                 <button
@@ -522,7 +605,9 @@ export default function SettingsPage() {
                     <div className="font-medium">{t("languageEnglish")}</div>
                     {locale === "en" && <Check className="h-5 w-5" />}
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{t("languageEnglishDescription")}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t("languageEnglishDescription")}
+                  </p>
                 </button>
               </div>
             </div>
@@ -532,6 +617,3 @@ export default function SettingsPage() {
     </AppShell>
   );
 }
-
-
-

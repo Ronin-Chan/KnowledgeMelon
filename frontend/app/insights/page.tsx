@@ -108,7 +108,9 @@ function MetricCard({
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
           <p className="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {description}
+          </p>
         </div>
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Icon className="h-5 w-5" />
@@ -152,7 +154,10 @@ function ProgressBar({
         <span className="font-medium">{formatPercent(value)}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.round(value * 100)}%` }} />
+        <div
+          className={`h-full rounded-full ${color}`}
+          style={{ width: `${Math.round(value * 100)}%` }}
+        />
       </div>
     </div>
   );
@@ -239,12 +244,16 @@ function QualityMeterCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-foreground">{title}</p>
-          <p className={`mt-1 text-3xl font-semibold tracking-tight ${statusClass}`}>
+          <p
+            className={`mt-1 text-3xl font-semibold tracking-tight ${statusClass}`}
+          >
             {formatPercent(normalized)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{note}</p>
         </div>
-        <div className={`rounded-2xl px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${inverse ? "bg-muted/60 text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+        <div
+          className={`rounded-2xl px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${inverse ? "bg-muted/60 text-muted-foreground" : "bg-primary/10 text-primary"}`}
+        >
           {directionLabel}
         </div>
       </div>
@@ -252,7 +261,8 @@ function QualityMeterCard({
         <div className="flex h-14 items-end gap-1 rounded-2xl bg-muted/30 px-3 py-3">
           {Array.from({ length: totalBars }, (_, index) => {
             const active = index < filled;
-            const fillOpacity = 0.25 + (index / Math.max(totalBars - 1, 1)) * 0.75;
+            const fillOpacity =
+              0.25 + (index / Math.max(totalBars - 1, 1)) * 0.75;
             const segmentClass = inverse
               ? active
                 ? accent
@@ -308,10 +318,14 @@ export default function InsightsPage() {
         }
 
         setSummary((await summaryResponse.json()) as SummaryResponse);
-        setInteractions((await interactionsResponse.json()) as InteractionItem[]);
+        setInteractions(
+          (await interactionsResponse.json()) as InteractionItem[],
+        );
       } catch (err) {
         console.error("Failed to load insights:", err);
-        setError(err instanceof Error ? err.message : "Failed to load insights");
+        setError(
+          err instanceof Error ? err.message : "Failed to load insights",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -324,7 +338,10 @@ export default function InsightsPage() {
     if (!interactions.length) {
       return 0;
     }
-    const total = interactions.reduce((acc, item) => acc + item.citation_coverage, 0);
+    const total = interactions.reduce(
+      (acc, item) => acc + item.citation_coverage,
+      0,
+    );
     return total / interactions.length;
   }, [interactions]);
 
@@ -403,14 +420,20 @@ export default function InsightsPage() {
         <PageContainer>
           <div className="mb-8 flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight">{t("insightsTitle")}</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">
+                {t("insightsTitle")}
+              </h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
                 {t("insightsSubtitle")}
               </p>
             </div>
             <div className="hidden rounded-2xl border border-border bg-card px-4 py-3 text-right shadow-sm sm:block">
-              <div className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{t("insightsCitationCoverageRate")}</div>
-              <div className="mt-2 text-2xl font-semibold">{formatPercent(recentAverageScore)}</div>
+              <div className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                {t("insightsCitationCoverageRate")}
+              </div>
+              <div className="mt-2 text-2xl font-semibold">
+                {formatPercent(recentAverageScore)}
+              </div>
             </div>
           </div>
 
@@ -418,7 +441,9 @@ export default function InsightsPage() {
             <div className="flex min-h-[50vh] items-center justify-center">
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">{t("knowledgeLoading")}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t("knowledgeLoading")}
+                </span>
               </div>
             </div>
           ) : error ? (
@@ -469,7 +494,9 @@ export default function InsightsPage() {
                   value={String(summary.knowledge.archived_documents)}
                   description={t("insightsKnowledge")}
                   icon={FileText}
-                  trendValue={summary.knowledge.archived_documents / maxUsageValue}
+                  trendValue={
+                    summary.knowledge.archived_documents / maxUsageValue
+                  }
                   trendAccent="bg-orange-500"
                   trendLabel={t("insightsMetricTrend")}
                   trendLowLabel={t("insightsTrendLow")}
@@ -485,24 +512,48 @@ export default function InsightsPage() {
                       <BookOpen className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold">{t("insightsRetrieval")}</h2>
-                      <p className="text-sm text-muted-foreground">{t("insightsSubtitle")}</p>
+                      <h2 className="text-lg font-semibold">
+                        {t("insightsRetrieval")}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {t("insightsSubtitle")}
+                      </p>
                     </div>
                   </div>
                   <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
                     <div className="space-y-4">
-                      <ProgressBar label={t("insightsRetrievalHitRate")} value={summary.retrieval.hit_rate} color="bg-blue-500" />
-                      <ProgressBar label={t("insightsNoResultRate")} value={summary.retrieval.no_result_rate} color="bg-amber-500" />
-                      <ProgressBar label={t("insightsCitationCoverageRate")} value={summary.retrieval.citation_coverage_rate} color="bg-emerald-500" />
+                      <ProgressBar
+                        label={t("insightsRetrievalHitRate")}
+                        value={summary.retrieval.hit_rate}
+                        color="bg-blue-500"
+                      />
+                      <ProgressBar
+                        label={t("insightsNoResultRate")}
+                        value={summary.retrieval.no_result_rate}
+                        color="bg-amber-500"
+                      />
+                      <ProgressBar
+                        label={t("insightsCitationCoverageRate")}
+                        value={summary.retrieval.citation_coverage_rate}
+                        color="bg-emerald-500"
+                      />
                     </div>
                     <div className="space-y-3 text-sm">
                       <div className="rounded-2xl bg-muted/50 p-3">
-                        <div className="text-muted-foreground">{t("insightsAvgTopK")}</div>
-                        <div className="mt-1 text-xl font-semibold">{summary.retrieval.avg_top_k.toFixed(1)}</div>
+                        <div className="text-muted-foreground">
+                          {t("insightsAvgTopK")}
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {summary.retrieval.avg_top_k.toFixed(1)}
+                        </div>
                       </div>
                       <div className="rounded-2xl bg-muted/50 p-3">
-                        <div className="text-muted-foreground">{t("insightsAvgRetrieved")}</div>
-                        <div className="mt-1 text-xl font-semibold">{summary.retrieval.avg_retrieved_count.toFixed(1)}</div>
+                        <div className="text-muted-foreground">
+                          {t("insightsAvgRetrieved")}
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {summary.retrieval.avg_retrieved_count.toFixed(1)}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -514,14 +565,20 @@ export default function InsightsPage() {
                       <Sparkles className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold">{t("insightsQuality")}</h2>
-                      <p className="text-sm text-muted-foreground">{t("insightsSubtitle")}</p>
+                      <h2 className="text-lg font-semibold">
+                        {t("insightsQuality")}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {t("insightsSubtitle")}
+                      </p>
                     </div>
                   </div>
                   <div className="mb-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 px-4 py-3">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm font-medium">{t("insightsQualityDistribution")}</p>
+                        <p className="text-sm font-medium">
+                          {t("insightsQualityDistribution")}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {t("insightsQualityDistributionHint")}
                         </p>
@@ -550,7 +607,11 @@ export default function InsightsPage() {
                           mid: t("insightsDistributionMid"),
                           high: t("insightsDistributionHigh"),
                         }}
-                        directionLabel={card.inverse ? t("insightsLowerBetter") : t("insightsHigherBetter")}
+                        directionLabel={
+                          card.inverse
+                            ? t("insightsLowerBetter")
+                            : t("insightsHigherBetter")
+                        }
                       />
                     ))}
                   </div>
@@ -564,21 +625,35 @@ export default function InsightsPage() {
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold">{t("insightsKnowledge")}</h2>
+                      <h2 className="text-lg font-semibold">
+                        {t("insightsKnowledge")}
+                      </h2>
                     </div>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsArchivedDocuments")}</span>
-                      <span className="font-semibold">{summary.knowledge.archived_documents}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsArchivedDocuments")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.knowledge.archived_documents}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsDuplicateDocuments")}</span>
-                      <span className="font-semibold">{summary.knowledge.duplicate_documents}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsDuplicateDocuments")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.knowledge.duplicate_documents}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsKnowledge")}</span>
-                      <span className="font-semibold">{summary.knowledge.active_documents}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsKnowledge")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.knowledge.active_documents}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -589,17 +664,27 @@ export default function InsightsPage() {
                       <Brain className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold">{t("insightsMemory")}</h2>
+                      <h2 className="text-lg font-semibold">
+                        {t("insightsMemory")}
+                      </h2>
                     </div>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsActiveMemories")}</span>
-                      <span className="font-semibold">{summary.memory.active_memories}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsActiveMemories")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.memory.active_memories}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsExpiredMemories")}</span>
-                      <span className="font-semibold">{summary.memory.expired_memories}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsExpiredMemories")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.memory.expired_memories}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -610,21 +695,35 @@ export default function InsightsPage() {
                       <AlertTriangle className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold">{t("insightsUsage")}</h2>
+                      <h2 className="text-lg font-semibold">
+                        {t("insightsUsage")}
+                      </h2>
                     </div>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsConversations")}</span>
-                      <span className="font-semibold">{summary.usage.conversations}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsConversations")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.usage.conversations}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsDocuments")}</span>
-                      <span className="font-semibold">{summary.usage.documents}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsDocuments")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.usage.documents}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
-                      <span className="text-muted-foreground">{t("insightsMemories")}</span>
-                      <span className="font-semibold">{summary.usage.memories}</span>
+                      <span className="text-muted-foreground">
+                        {t("insightsMemories")}
+                      </span>
+                      <span className="font-semibold">
+                        {summary.usage.memories}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -638,8 +737,12 @@ export default function InsightsPage() {
                         <Link2 className="h-5 w-5" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold">{t("insightsRecent")}</h2>
-                        <p className="text-sm text-muted-foreground">{t("insightsRecentSources")}</p>
+                        <h2 className="text-lg font-semibold">
+                          {t("insightsRecent")}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          {t("insightsRecentSources")}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -652,18 +755,32 @@ export default function InsightsPage() {
                 ) : (
                   <div className="space-y-4">
                     {interactions.map((item) => (
-                      <details key={item.id} className="group rounded-3xl border border-border bg-muted/20 p-4 shadow-sm open:bg-card">
+                      <details
+                        key={item.id}
+                        className="group rounded-3xl border border-border bg-muted/20 p-4 shadow-sm open:bg-card"
+                      >
                         <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">{item.question}</p>
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {item.question}
+                            </p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {new Date(item.created_at).toLocaleString(locale === "zh" ? "zh-CN" : "en-US")}
+                              {new Date(item.created_at).toLocaleString(
+                                locale === "zh" ? "zh-CN" : "en-US",
+                              )}
                             </p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="rounded-full bg-background px-2.5 py-1 text-muted-foreground">{item.mode}</span>
-                            <span className="rounded-full bg-background px-2.5 py-1 text-muted-foreground">{t("insightsRecentSources")}: {item.citation_count}</span>
-                            <span className={`rounded-full px-2.5 py-1 ${item.answer_success ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"}`}>
+                            <span className="rounded-full bg-background px-2.5 py-1 text-muted-foreground">
+                              {item.mode}
+                            </span>
+                            <span className="rounded-full bg-background px-2.5 py-1 text-muted-foreground">
+                              {t("insightsRecentSources")}:{" "}
+                              {item.citation_count}
+                            </span>
+                            <span
+                              className={`rounded-full px-2.5 py-1 ${item.answer_success ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"}`}
+                            >
                               {item.answer_success ? t("success") : t("error")}
                             </span>
                             <span className="rounded-full bg-background px-2.5 py-1 text-muted-foreground">
@@ -674,48 +791,75 @@ export default function InsightsPage() {
                         <div className="mt-4 grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
                           <div className="grid gap-3 md:grid-cols-2">
                             <div className="rounded-2xl bg-background p-3">
-                              <div className="text-xs text-muted-foreground">{t("insightsRecentAnswer")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("insightsRecentAnswer")}
+                              </div>
                               <p className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
                                 {item.answer || t("insightsNoData")}
                               </p>
                             </div>
                             <div className="rounded-2xl bg-background p-3">
-                              <div className="text-xs text-muted-foreground">{t("insightsRecentSources")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("insightsRecentSources")}
+                              </div>
                               <div className="mt-2 space-y-2">
-                                {item.retrieved_sources.slice(0, 3).map((source) => (
-                                  <div key={source.id} className="rounded-lg bg-muted/50 px-3 py-2 text-xs">
-                                    <div className="flex items-center justify-between gap-3">
-                                      <span className="truncate font-medium">{source.document_title}</span>
-                                      <span className="text-muted-foreground">{source.score.toFixed(2)}</span>
-                                    </div>
-                                    <p className="mt-1 text-muted-foreground">
-                                      {getSourceSnippet(source.reason || source.document_title)}
-                                    </p>
-                                    <details className="mt-1">
-                                      <summary className="cursor-pointer text-[11px] font-medium text-primary hover:underline">
-                                        {t("insightsRecentExpand")}
-                                      </summary>
-                                      <div className="mt-2 space-y-2">
-                                        <p className="text-xs leading-5 text-muted-foreground">
-                                          {source.reason || source.document_title}
-                                        </p>
-                                        <p className="text-[11px] text-muted-foreground">{source.reason}</p>
+                                {item.retrieved_sources
+                                  .slice(0, 3)
+                                  .map((source) => (
+                                    <div
+                                      key={source.id}
+                                      className="rounded-lg bg-muted/50 px-3 py-2 text-xs"
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="truncate font-medium">
+                                          {source.document_title}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          {source.score.toFixed(2)}
+                                        </span>
                                       </div>
-                                    </details>
-                                  </div>
-                                ))}
+                                      <p className="mt-1 text-muted-foreground">
+                                        {getSourceSnippet(
+                                          source.reason ||
+                                            source.document_title,
+                                        )}
+                                      </p>
+                                      <details className="mt-1">
+                                        <summary className="cursor-pointer text-[11px] font-medium text-primary hover:underline">
+                                          {t("insightsRecentExpand")}
+                                        </summary>
+                                        <div className="mt-2 space-y-2">
+                                          <p className="text-xs leading-5 text-muted-foreground">
+                                            {source.reason ||
+                                              source.document_title}
+                                          </p>
+                                          <p className="text-[11px] text-muted-foreground">
+                                            {source.reason}
+                                          </p>
+                                        </div>
+                                      </details>
+                                    </div>
+                                  ))}
                                 {item.retrieved_sources.length === 0 && (
-                                  <p className="text-xs text-muted-foreground">{t("insightsNoData")}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t("insightsNoData")}
+                                  </p>
                                 )}
                               </div>
                             </div>
                           </div>
                           <div className="rounded-2xl bg-background p-3">
-                            <div className="text-xs text-muted-foreground">{t("insightsQuality")}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {t("insightsQuality")}
+                            </div>
                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                               <div className="rounded-2xl bg-muted/40 p-3">
-                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("insightsRetrievalHitRate")}</div>
-                                <div className="mt-2 text-2xl font-semibold">{formatPercent(item.retrieval_hit_rate)}</div>
+                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {t("insightsRetrievalHitRate")}
+                                </div>
+                                <div className="mt-2 text-2xl font-semibold">
+                                  {formatPercent(item.retrieval_hit_rate)}
+                                </div>
                                 <div className="mt-3">
                                   <MiniTrendBar
                                     value={item.retrieval_hit_rate}
@@ -729,8 +873,12 @@ export default function InsightsPage() {
                                 </div>
                               </div>
                               <div className="rounded-2xl bg-muted/40 p-3">
-                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("insightsCitationCoverageRate")}</div>
-                                <div className="mt-2 text-2xl font-semibold">{formatPercent(item.citation_coverage)}</div>
+                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {t("insightsCitationCoverageRate")}
+                                </div>
+                                <div className="mt-2 text-2xl font-semibold">
+                                  {formatPercent(item.citation_coverage)}
+                                </div>
                                 <div className="mt-3">
                                   <MiniTrendBar
                                     value={item.citation_coverage}
@@ -744,8 +892,14 @@ export default function InsightsPage() {
                                 </div>
                               </div>
                               <div className="rounded-2xl bg-muted/40 p-3">
-                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("insightsOneShotRate")}</div>
-                                <div className="mt-2 text-2xl font-semibold">{item.first_try_answer ? t("success") : t("error")}</div>
+                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {t("insightsOneShotRate")}
+                                </div>
+                                <div className="mt-2 text-2xl font-semibold">
+                                  {item.first_try_answer
+                                    ? t("success")
+                                    : t("error")}
+                                </div>
                                 <div className="mt-3">
                                   <MiniTrendBar
                                     value={item.first_try_answer ? 1 : 0}
@@ -759,8 +913,14 @@ export default function InsightsPage() {
                                 </div>
                               </div>
                               <div className="rounded-2xl bg-muted/40 p-3">
-                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("insightsAnswerSuccessRate")}</div>
-                                <div className="mt-2 text-2xl font-semibold">{item.answer_success ? t("success") : t("error")}</div>
+                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {t("insightsAnswerSuccessRate")}
+                                </div>
+                                <div className="mt-2 text-2xl font-semibold">
+                                  {item.answer_success
+                                    ? t("success")
+                                    : t("error")}
+                                </div>
                                 <div className="mt-3">
                                   <MiniTrendBar
                                     value={item.answer_success ? 1 : 0}
@@ -774,16 +934,35 @@ export default function InsightsPage() {
                                 </div>
                               </div>
                               <div className="rounded-2xl bg-muted/40 p-3 sm:col-span-2">
-                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("insightsAnswerProfile")}</div>
+                                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {t("insightsAnswerProfile")}
+                                </div>
                                 <div className="mt-3 flex items-center gap-3">
                                   <div className="flex-1">
                                     <div className="flex h-3 overflow-hidden rounded-full bg-muted">
-                                      <div className="bg-emerald-500" style={{ width: `${Math.round(item.citation_coverage * 100)}%` }} />
-                                      <div className="bg-amber-500" style={{ width: `${Math.round(item.follow_up_required ? 15 : 5)}%` }} />
-                                      <div className="bg-red-500" style={{ width: `${Math.round(item.hallucination_flag ? 10 : 0)}%` }} />
+                                      <div
+                                        className="bg-emerald-500"
+                                        style={{
+                                          width: `${Math.round(item.citation_coverage * 100)}%`,
+                                        }}
+                                      />
+                                      <div
+                                        className="bg-amber-500"
+                                        style={{
+                                          width: `${Math.round(item.follow_up_required ? 15 : 5)}%`,
+                                        }}
+                                      />
+                                      <div
+                                        className="bg-red-500"
+                                        style={{
+                                          width: `${Math.round(item.hallucination_flag ? 10 : 0)}%`,
+                                        }}
+                                      />
                                     </div>
                                   </div>
-                                  <span className="text-xs text-muted-foreground">{t("insightsAnswerProfileLegend")}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {t("insightsAnswerProfileLegend")}
+                                  </span>
                                 </div>
                               </div>
                             </div>

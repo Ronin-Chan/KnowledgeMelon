@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, Brain, MessageSquare, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Brain,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { PageContainer, PageShell, PageSurface } from "@/components/page-shell";

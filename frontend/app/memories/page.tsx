@@ -49,7 +49,11 @@ import {
 import { apiFetch, API_BASE_URL } from "@/lib/api";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
-import { PageContainer, PageHeader, PageSurface } from "@/components/page-shell";
+import {
+  PageContainer,
+  PageHeader,
+  PageSurface,
+} from "@/components/page-shell";
 import { useLocale, useT } from "@/lib/i18n";
 
 interface Memory {
@@ -358,12 +362,13 @@ export default function MemoriesPage() {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${toast.type === "success"
+            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
+              toast.type === "success"
                 ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
                 : toast.type === "error"
                   ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
                   : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
-              }`}
+            }`}
           >
             {toast.type === "success" && <Check className="h-4 w-4" />}
             {toast.type === "error" && <AlertCircle className="h-4 w-4" />}
@@ -435,16 +440,22 @@ export default function MemoriesPage() {
               <PageSurface className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-4 w-4 text-purple-500" />
-                  <span className="text-sm font-medium">{t("memoriesAutoExtract")}</span>
+                  <span className="text-sm font-medium">
+                    {t("memoriesAutoExtract")}
+                  </span>
                 </div>
                 <p className="text-2xl font-semibold">
-                  {settings.auto_extract ? t("memoriesAutoExtractOn") : t("memoriesAutoExtractOff")}
+                  {settings.auto_extract
+                    ? t("memoriesAutoExtractOn")
+                    : t("memoriesAutoExtractOff")}
                 </p>
               </PageSurface>
               <PageSurface className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="h-4 w-4 text-emerald-500" />
-                  <span className="text-sm font-medium">{t("memoriesWhitelistTopics")}</span>
+                  <span className="text-sm font-medium">
+                    {t("memoriesWhitelistTopics")}
+                  </span>
                 </div>
                 <p className="text-2xl font-semibold">
                   {settings.whitelist_topics.length}
@@ -453,7 +464,9 @@ export default function MemoriesPage() {
               <PageSurface className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Filter className="h-4 w-4 text-red-500" />
-                  <span className="text-sm font-medium">{t("memoriesBlacklistTopics")}</span>
+                  <span className="text-sm font-medium">
+                    {t("memoriesBlacklistTopics")}
+                  </span>
                 </div>
                 <p className="text-2xl font-semibold">
                   {settings.blacklist_topics.length}
@@ -473,7 +486,11 @@ export default function MemoriesPage() {
                   className="pl-9"
                 />
               </div>
-              <Button variant="outline" className="sm:w-auto" onClick={handleSearch}>
+              <Button
+                variant="outline"
+                className="sm:w-auto"
+                onClick={handleSearch}
+              >
                 {t("memoriesSearch")}
               </Button>
             </div>
@@ -503,7 +520,11 @@ export default function MemoriesPage() {
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
-                          {categoryLabels[cat.value as keyof typeof categoryLabels]}
+                          {
+                            categoryLabels[
+                              cat.value as keyof typeof categoryLabels
+                            ]
+                          }
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -538,7 +559,9 @@ export default function MemoriesPage() {
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-2">{t("memoriesLoading")}</p>
+                <p className="text-muted-foreground mt-2">
+                  {t("memoriesLoading")}
+                </p>
               </div>
             ) : memories.length === 0 ? (
               <div className="p-12 text-center">
@@ -569,7 +592,8 @@ export default function MemoriesPage() {
                           {getCategoryBadge(memory.category)}
                           {memory.source && (
                             <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5">
-                              {locale === "zh" ? "来源：" : "Source:"} {memory.source}
+                              {locale === "zh" ? "来源：" : "Source:"}{" "}
+                              {memory.source}
                             </span>
                           )}
                           <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5">
@@ -625,19 +649,23 @@ export default function MemoriesPage() {
                     auto_extract: !settings.auto_extract,
                   })
                 }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.auto_extract
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  settings.auto_extract
                     ? "bg-emerald-500"
                     : "bg-gray-200 dark:bg-gray-700"
-                  }`}
+                }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.auto_extract ? "translate-x-6" : "translate-x-1"
-                    }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.auto_extract ? "translate-x-6" : "translate-x-1"
+                  }`}
                 />
               </button>
             </div>
             <div className="space-y-3">
-              <label className="font-medium">{t("memoriesMinImportance")}</label>
+              <label className="font-medium">
+                {t("memoriesMinImportance")}
+              </label>
               <p className="text-sm text-muted-foreground">
                 {t("memoriesMinImportanceHint")}
               </p>
@@ -680,7 +708,9 @@ export default function MemoriesPage() {
               />
             </div>
             <div className="space-y-3">
-              <label className="font-medium">{t("memoriesConflictPolicy")}</label>
+              <label className="font-medium">
+                {t("memoriesConflictPolicy")}
+              </label>
               <p className="text-sm text-muted-foreground">
                 {locale === "zh"
                   ? "当新的记忆和已有记忆冲突时，系统会按这个策略处理。"
@@ -699,14 +729,22 @@ export default function MemoriesPage() {
                   <SelectValue placeholder={t("memoriesConflictPolicy")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="latest_wins">{t("memoriesPolicyLatest")}</SelectItem>
-                  <SelectItem value="importance_wins">{t("memoriesPolicyImportance")}</SelectItem>
-                  <SelectItem value="merge">{t("memoriesPolicyMerge")}</SelectItem>
+                  <SelectItem value="latest_wins">
+                    {t("memoriesPolicyLatest")}
+                  </SelectItem>
+                  <SelectItem value="importance_wins">
+                    {t("memoriesPolicyImportance")}
+                  </SelectItem>
+                  <SelectItem value="merge">
+                    {t("memoriesPolicyMerge")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-3">
-              <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
+              <label className="font-medium">
+                {t("memoriesWhitelistTopics")}
+              </label>
               <p className="text-sm text-muted-foreground">
                 {t("memoriesWhitelistHint")}
               </p>
@@ -743,7 +781,9 @@ export default function MemoriesPage() {
               </div>
             </div>
             <div className="space-y-3">
-              <label className="font-medium">{t("memoriesBlacklistTopics")}</label>
+              <label className="font-medium">
+                {t("memoriesBlacklistTopics")}
+              </label>
               <p className="text-sm text-muted-foreground">
                 {t("memoriesBlacklistHint")}
               </p>
@@ -828,8 +868,3 @@ export default function MemoriesPage() {
     </AppShell>
   );
 }
-
-
-
-
-
