@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 
 from api.chat import router as chat_router
 from api.documents import router as documents_router
+from api.metrics import router as metrics_router
+from api.rag import router as rag_router
 from api.ollama import router as ollama_router
 from api.memories import router as memories_router
 from api.conversations import router as conversations_router
@@ -31,6 +33,8 @@ app.add_middleware(
 
 app.include_router(chat_router)
 app.include_router(documents_router)
+app.include_router(metrics_router)
+app.include_router(rag_router)
 app.include_router(ollama_router)
 app.include_router(memories_router)
 app.include_router(conversations_router)

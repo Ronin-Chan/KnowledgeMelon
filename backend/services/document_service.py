@@ -1,4 +1,6 @@
 import csv
+import hashlib
+import json
 import os
 import asyncio
 import tempfile
@@ -89,6 +91,32 @@ class DocumentService:
             f.write(content)
 
         return file_path, file_ext
+
+    def compute_content_hash(self, content: bytes) -> str:
+        hasher = hashlib.sha256()
+        hasher.update(content)
+        return hasher.hexdigest()
+
+    def build_document_metadata(
+        self,
+        file_name: str,
+        file_type: str,
+        content_hash: str,
+        extra: dict | None = None,
+    ) -> str:
+        payload = {
+            "source_name": file_name,
+            "file_type": file_type,
+            "content_hash": content_hash,
+        }
+        if extra:
+            payload.update(extra)
+        return json.dumps(payload, ensure_ascii=False)
+
+    def chunk_hash(self, chunk_text: str) -> str:
+        hasher = hashlib.sha256()
+        hasher.update(chunk_text.encode("utf-8"))
+        return hasher.hexdigest()
 
     async def parse_document(
         self,

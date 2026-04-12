@@ -20,6 +20,8 @@ class MemorySettingsRequest(BaseModel):
     whitelist_topics: List[str] = Field(default_factory=list)
     blacklist_topics: List[str] = Field(default_factory=list)
     min_importance: int = 5
+    memory_ttl_days: int = 180
+    memory_conflict_policy: str = "latest_wins"
 
 
 async def get_memory_settings_from_db(session: AsyncSession, user_id) -> dict:
@@ -30,6 +32,8 @@ async def get_memory_settings_from_db(session: AsyncSession, user_id) -> dict:
         "whitelist_topics": settings.get("whitelist_topics", "").split(",") if settings.get("whitelist_topics") else [],
         "blacklist_topics": settings.get("blacklist_topics", "").split(",") if settings.get("blacklist_topics") else [],
         "min_importance": int(settings.get("min_importance", "5")),
+        "memory_ttl_days": int(settings.get("memory_ttl_days", "180")),
+        "memory_conflict_policy": settings.get("memory_conflict_policy", "latest_wins"),
     }
 
 
@@ -39,6 +43,8 @@ async def save_memory_settings_to_db(session: AsyncSession, user_id, settings: d
         "whitelist_topics": ",".join(settings.get("whitelist_topics", [])),
         "blacklist_topics": ",".join(settings.get("blacklist_topics", [])),
         "min_importance": str(settings.get("min_importance", 5)),
+        "memory_ttl_days": str(settings.get("memory_ttl_days", 180)),
+        "memory_conflict_policy": settings.get("memory_conflict_policy", "latest_wins"),
     }
     for key, value in settings_map.items():
         result = await session.execute(
@@ -203,6 +209,8 @@ async def update_memory_settings(
         "whitelist_topics": request.whitelist_topics,
         "blacklist_topics": request.blacklist_topics,
         "min_importance": request.min_importance,
+        "memory_ttl_days": request.memory_ttl_days,
+        "memory_conflict_policy": request.memory_conflict_policy,
     }
     await save_memory_settings_to_db(session, current_user.id, settings)
     return {"success": True, "settings": settings}

@@ -66,6 +66,8 @@ interface MemorySettings {
   whitelist_topics: string[];
   blacklist_topics: string[];
   min_importance: number;
+  memory_ttl_days: number;
+  memory_conflict_policy: string;
 }
 
 interface Toast {
@@ -99,6 +101,8 @@ export default function MemoriesPage() {
     whitelist_topics: [],
     blacklist_topics: [],
     min_importance: 5,
+    memory_ttl_days: 180,
+    memory_conflict_policy: "latest_wins",
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [newWhitelistItem, setNewWhitelistItem] = useState("");
@@ -630,7 +634,7 @@ export default function MemoriesPage() {
                   />
                 </button>
               </div>
-<div className="space-y-3">
+              <div className="space-y-3">
                 <label className="font-medium">{t("memoriesMinImportance")}</label>
                 <p className="text-sm text-muted-foreground">
                   {t("memoriesMinImportanceHint")}
@@ -654,7 +658,52 @@ export default function MemoriesPage() {
                   </span>
                 </div>
               </div>
-<div className="space-y-3">
+              <div className="space-y-3">
+                <label className="font-medium">{t("memoriesTtlDays")}</label>
+                <p className="text-sm text-muted-foreground">
+                  {locale === "zh"
+                    ? "超过这个天数的记忆会被自动标记为过期。"
+                    : "Memories older than this many days will be marked as expired."}
+                </p>
+                <Input
+                  type="number"
+                  min={0}
+                  value={settings.memory_ttl_days}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      memory_ttl_days: parseInt(e.target.value || "0"),
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="font-medium">{t("memoriesConflictPolicy")}</label>
+                <p className="text-sm text-muted-foreground">
+                  {locale === "zh"
+                    ? "当新的记忆和已有记忆冲突时，系统会按这个策略处理。"
+                    : "How the system should resolve conflicts with existing memories."}
+                </p>
+                <Select
+                  value={settings.memory_conflict_policy}
+                  onValueChange={(value) =>
+                    setSettings({
+                      ...settings,
+                      memory_conflict_policy: value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("memoriesConflictPolicy")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest_wins">{t("memoriesPolicyLatest")}</SelectItem>
+                    <SelectItem value="importance_wins">{t("memoriesPolicyImportance")}</SelectItem>
+                    <SelectItem value="merge">{t("memoriesPolicyMerge")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-3">
                 <label className="font-medium">{t("memoriesWhitelistTopics")}</label>
                 <p className="text-sm text-muted-foreground">
                   {t("memoriesWhitelistHint")}

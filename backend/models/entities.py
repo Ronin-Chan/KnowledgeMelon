@@ -2,7 +2,7 @@ from datetime import datetime
 import uuid
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -23,6 +23,7 @@ class User(Base):
     memories = relationship("Memory", back_populates="user")
     memory_settings = relationship("MemorySetting", back_populates="user")
     api_keys = relationship("UserApiKey", back_populates="user", cascade="all, delete-orphan")
+    interaction_metrics = relationship("InteractionMetric", back_populates="user")
 
 
 class UserApiKey(Base):
@@ -48,7 +49,13 @@ class Document(Base):
     title = Column(String(255))
     file_type = Column(String(50))
     file_path = Column(String(500))
+    content_hash = Column(String(128), nullable=True, index=True)
+    version = Column(Integer, default=1)
+    is_latest = Column(Integer, default=1)
+    source_name = Column(String(255), nullable=True)
+    metadata_json = Column(Text, nullable=True)
     status = Column(String(20), default="processing")
+    duplicate_of_document_id = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="documents")
@@ -62,6 +69,8 @@ class DocumentChunk(Base):
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"))
     content = Column(Text)
     chunk_index = Column(Integer)
+    chunk_hash = Column(String(128), nullable=True, index=True)
+    token_count = Column(Integer, default=0)
     embedding = Column(Vector)
 
     document = relationship("Document", back_populates="chunks")
@@ -114,6 +123,11 @@ class Memory(Base):
     category = Column(String(50), default="fact")
     importance = Column(Integer, default=5)
     source = Column(String(255))
+    normalized_key = Column(String(128), nullable=True, index=True)
+    status = Column(String(20), default="active")
+    expires_at = Column(DateTime, nullable=True)
+    confidence = Column(Float, default=1.0)
+    metadata_json = Column(Text, nullable=True)
     embedding = Column(Vector)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -121,6 +135,38 @@ class Memory(Base):
     last_accessed = Column(DateTime)
 
     user = relationship("User", back_populates="memories")
+
+
+class InteractionMetric(Base):
+    __tablename__ = "interaction_metrics"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=True)
+    message_id = Column(UUID(as_uuid=True), nullable=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=True)
+    model = Column(String(100), nullable=True)
+    mode = Column(String(20), default="basic")
+    use_rag = Column(Integer, default=0)
+    use_memory = Column(Integer, default=0)
+    use_tools = Column(Integer, default=0)
+    is_regeneration = Column(Integer, default=0)
+    top_k = Column(Integer, default=0)
+    retrieved_count = Column(Integer, default=0)
+    no_result = Column(Integer, default=1)
+    citation_count = Column(Integer, default=0)
+    citation_coverage = Column(Float, default=0.0)
+    retrieval_hit_rate = Column(Float, default=0.0)
+    answer_success = Column(Integer, default=0)
+    first_try_answer = Column(Integer, default=0)
+    follow_up_required = Column(Integer, default=0)
+    hallucination_flag = Column(Integer, default=0)
+    human_correction_flag = Column(Integer, default=0)
+    retrieved_sources_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="interaction_metrics")
 
 
 class MemorySetting(Base):

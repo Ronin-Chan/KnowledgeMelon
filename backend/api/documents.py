@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from datetime import datetime, timedelta
 from typing import List
@@ -39,6 +40,35 @@ async def _reconcile_stuck_processing_documents(user_id) -> None:
             doc.status = "failed"
         if stale_docs:
             await session.commit()
+
+
+async def _get_next_document_version(session: AsyncSession, user_id, title: str) -> int:
+    result = await session.execute(
+        select(Document)
+        .where(Document.user_id == user_id, Document.title == title)
+        .order_by(Document.version.desc())
+        .limit(1)
+    )
+    latest = result.scalar_one_or_none()
+    return (latest.version or 0) + 1 if latest else 1
+
+
+async def _archive_previous_versions(session: AsyncSession, user_id, title: str) -> None:
+    result = await session.execute(
+        select(Document).where(
+            Document.user_id == user_id,
+            Document.title == title,
+            Document.is_latest == 1,
+            Document.status.in_(["completed", "processing"]),
+        )
+    )
+    previous_versions = result.scalars().all()
+    for doc in previous_versions:
+        doc.is_latest = 0
+        if doc.status == "completed":
+            doc.status = "archived"
+    if previous_versions:
+        await session.commit()
 
 
 async def _process_document_async(
@@ -90,7 +120,16 @@ async def _process_document_async(
                 document_processor.update_progress(job_id, current_progress, 100, f"Embedding {index + 1}/{len(chunks)}")
 
             for index, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
-                session.add(DocumentChunk(document_id=doc.id, content=chunk_text, chunk_index=index, embedding=embedding))
+                session.add(
+                    DocumentChunk(
+                        document_id=doc.id,
+                        content=chunk_text,
+                        chunk_index=index,
+                        chunk_hash=document_service.chunk_hash(chunk_text),
+                        token_count=max(1, len(chunk_text) // 4),
+                        embedding=embedding,
+                    )
+                )
 
             doc.status = "completed"
             await session.commit()
@@ -139,13 +178,49 @@ async def upload_document(
 
     await _reconcile_stuck_processing_documents(current_user.id)
     content = await file.read()
+    content_hash = document_service.compute_content_hash(content)
+
+    duplicate_result = await session.execute(
+        select(Document).where(
+            Document.user_id == current_user.id,
+            Document.content_hash == content_hash,
+            Document.status != "failed",
+        )
+    )
+    duplicate_document = duplicate_result.scalar_one_or_none()
+    if duplicate_document:
+        return {
+            "id": str(duplicate_document.id),
+            "title": duplicate_document.title,
+            "status": duplicate_document.status,
+            "chunks_count": 0,
+            "duplicate": True,
+            "version": duplicate_document.version or 1,
+        }
+
     file_path, _ = await document_service.save_document(file.filename, content, str(current_user.id))
+    version = await _get_next_document_version(session, current_user.id, file.filename)
+    await _archive_previous_versions(session, current_user.id, file.filename)
 
     document = Document(
         user_id=current_user.id,
         title=file.filename,
         file_type=file_ext,
         file_path=file_path,
+        content_hash=content_hash,
+        version=version,
+        is_latest=1,
+        source_name=file.filename,
+        metadata_json=document_service.build_document_metadata(
+            file.filename,
+            file_ext,
+            content_hash,
+            extra={
+                "version": version,
+                "uploaded_by": str(current_user.id),
+                "created_at": datetime.utcnow().isoformat(),
+            },
+        ),
         status="processing",
     )
     session.add(document)
@@ -185,6 +260,9 @@ async def list_documents(
             "title": doc.title,
             "file_type": doc.file_type,
             "status": doc.status,
+            "version": doc.version or 1,
+            "is_latest": bool(doc.is_latest),
+            "source_name": doc.source_name,
             "created_at": doc.created_at.isoformat(),
         }
         for doc in documents
@@ -211,6 +289,9 @@ async def get_document_content(
                     "id": str(doc.id),
                     "title": doc.title,
                     "file_type": doc.file_type,
+                    "version": doc.version or 1,
+                    "is_latest": bool(doc.is_latest),
+                    "source_name": doc.source_name,
                     "content": "",
                     "total_pages": total_pages,
                     "file_size_mb": doc_info["file_size_mb"],
@@ -227,6 +308,9 @@ async def get_document_content(
                 "id": str(doc.id),
                 "title": doc.title,
                 "file_type": doc.file_type,
+                "version": doc.version or 1,
+                "is_latest": bool(doc.is_latest),
+                "source_name": doc.source_name,
                 "content": text,
                 "total_pages": total_pages,
                 "file_size_mb": doc_info["file_size_mb"],
@@ -237,7 +321,15 @@ async def get_document_content(
             }
 
         text = await document_service.parse_document(doc.file_path, doc.file_type)
-        return {"id": str(doc.id), "title": doc.title, "file_type": doc.file_type, "content": text}
+        return {
+            "id": str(doc.id),
+            "title": doc.title,
+            "file_type": doc.file_type,
+            "version": doc.version or 1,
+            "is_latest": bool(doc.is_latest),
+            "source_name": doc.source_name,
+            "content": text,
+        }
     except asyncio.TimeoutError as exc:
         raise HTTPException(504, "PDF parsing timed out") from exc
     except Exception as exc:
@@ -256,6 +348,9 @@ async def get_document_preview_info(
         doc_info = await asyncio.to_thread(document_service.get_pdf_info, doc.file_path)
         response["total_pages"] = doc_info["total_pages"]
         response["file_size_mb"] = doc_info["file_size_mb"]
+    response["version"] = doc.version or 1
+    response["is_latest"] = bool(doc.is_latest)
+    response["source_name"] = doc.source_name
     return response
 
 
@@ -307,7 +402,14 @@ async def get_document_status(
 ):
     doc = await _get_owned_document(session, document_id, current_user.id)
     job = document_processor.get_job_by_document(str(doc.id))
-    response = {"id": str(doc.id), "title": doc.title, "status": doc.status, "file_type": doc.file_type}
+    response = {
+        "id": str(doc.id),
+        "title": doc.title,
+        "status": doc.status,
+        "file_type": doc.file_type,
+        "version": doc.version or 1,
+        "is_latest": bool(doc.is_latest),
+    }
     if job:
         response["progress"] = {
             "percent": job.progress,
