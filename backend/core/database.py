@@ -1,12 +1,24 @@
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.config import settings
 from models.entities import Base
 
+database_url = make_url(settings.DATABASE_URL)
+connect_args = {}
+query = dict(database_url.query)
+
+sslmode = query.pop("sslmode", None)
+query.pop("channel_binding", None)
+
+if sslmode:
+    connect_args["ssl"] = sslmode
+
 engine = create_async_engine(
-    settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
+    database_url.set(drivername="postgresql+asyncpg", query=query),
     echo=False,
+    connect_args=connect_args,
 )
 
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
