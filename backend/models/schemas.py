@@ -21,7 +21,7 @@ class ChatRequest(BaseModel):
     use_tools: bool = False
     attachments: Optional[List[AttachmentInput]] = None
     apiKey: str
-    model: str = "gpt-4.1-mini"
+    model: str = "gpt-5.1-mini"
     baseUrl: Optional[str] = None
     response_length: str = "balanced"
 
@@ -55,7 +55,7 @@ class RAGChatRequest(BaseModel):
     attachments: Optional[List[AttachmentInput]] = None
     conversationId: Optional[str] = None
     apiKey: str
-    model: str = "gpt-4.1-mini"
+    model: str = "gpt-5.1-mini"
     baseUrl: Optional[str] = None
     response_length: str = "balanced"
 

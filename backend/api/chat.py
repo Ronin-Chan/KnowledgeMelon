@@ -13,8 +13,10 @@ from models.api_schemas import ChatRequest, RAGChatRequest
 from models.entities import User
 from services.conversation_service import conversation_service
 from services.document_service import document_service
+from services.metrics_service import metrics_service
 from services.llm_service import llm_service
 from services.memory_service import memory_service
+from services.rag_service import rag_service
 from services.tools_service import tools_service
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -82,6 +84,29 @@ async def _parse_temporary_attachment(file: UploadFile) -> dict:
             os.remove(temp_path)
 
 
+async def _build_retrieval_sources(
+    query: str,
+    api_key: str,
+    session: AsyncSession,
+    user_id: str,
+    provider: str,
+    base_url: str | None,
+):
+    try:
+        return await rag_service.preview_similar(
+            query=query,
+            api_key=api_key,
+            session=session,
+            user_id=user_id,
+            limit=5,
+            provider=provider,
+            base_url=base_url,
+        )
+    except Exception as exc:
+        print(f"[RAG Preview Error] {type(exc).__name__}: {exc}")
+        return []
+
+
 @router.post("/chat")
 async def chat(
     request: ChatRequest,
@@ -89,6 +114,7 @@ async def chat(
     current_user: User = Depends(get_current_user),
 ):
     optimized_context = []
+    retrieved_sources: list[dict] = []
     if request.conversationId:
         optimized_context = await conversation_service.get_optimized_context(
             session=session,
@@ -155,9 +181,41 @@ async def chat(
                             api_key=request.apiKey,
                         )
                     )
+            await metrics_service.record_interaction(
+                session,
+                user_id=current_user.id,
+                conversation_id=request.conversationId,
+                question=request.message,
+                answer=assistant_content,
+                model=request.model,
+                mode="basic",
+                use_rag=False,
+                use_memory=False,
+                use_tools=request.use_tools,
+                is_regeneration=request.is_regeneration,
+                top_k=0,
+                retrieved_sources=retrieved_sources,
+                answer_success=bool(assistant_content.strip()),
+            )
         except Exception as exc:
             print(f"[Chat Error] {type(exc).__name__}: {exc}")
             traceback.print_exc()
+            await metrics_service.record_interaction(
+                session,
+                user_id=current_user.id,
+                conversation_id=request.conversationId,
+                question=request.message,
+                answer=assistant_content,
+                model=request.model,
+                mode="basic",
+                use_rag=False,
+                use_memory=False,
+                use_tools=request.use_tools,
+                is_regeneration=request.is_regeneration,
+                top_k=0,
+                retrieved_sources=retrieved_sources,
+                answer_success=False,
+            )
             yield f"[ERROR]{str(exc)}"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
@@ -170,6 +228,7 @@ async def chat_with_rag(
     current_user: User = Depends(get_current_user),
 ):
     optimized_context = []
+    retrieved_sources: list[dict] = []
     if request.conversationId:
         optimized_context = await conversation_service.get_optimized_context(
             session=session,
@@ -184,6 +243,15 @@ async def chat_with_rag(
             role="user",
             content=request.message,
             model=request.model,
+        )
+    if request.use_rag:
+        retrieved_sources = await _build_retrieval_sources(
+            query=request.message,
+            api_key=request.apiKey,
+            session=session,
+            user_id=str(current_user.id),
+            provider=llm_service.infer_provider(request.model, request.baseUrl),
+            base_url=request.baseUrl,
         )
 
     async def generate():
@@ -246,9 +314,41 @@ async def chat_with_rag(
                             base_url=request.baseUrl,
                         )
                     )
+            await metrics_service.record_interaction(
+                session,
+                user_id=current_user.id,
+                conversation_id=request.conversationId,
+                question=request.message,
+                answer=assistant_content,
+                model=request.model,
+                mode="rag" if request.use_rag else "basic",
+                use_rag=request.use_rag,
+                use_memory=request.use_memory,
+                use_tools=request.use_tools,
+                is_regeneration=request.is_regeneration,
+                top_k=5 if request.use_rag else 0,
+                retrieved_sources=retrieved_sources,
+                answer_success=bool(assistant_content.strip()),
+            )
         except Exception as exc:
             print(f"[RAG Chat Error] {type(exc).__name__}: {exc}")
             traceback.print_exc()
+            await metrics_service.record_interaction(
+                session,
+                user_id=current_user.id,
+                conversation_id=request.conversationId,
+                question=request.message,
+                answer=assistant_content,
+                model=request.model,
+                mode="rag" if request.use_rag else "basic",
+                use_rag=request.use_rag,
+                use_memory=request.use_memory,
+                use_tools=request.use_tools,
+                is_regeneration=request.is_regeneration,
+                top_k=5 if request.use_rag else 0,
+                retrieved_sources=retrieved_sources,
+                answer_success=False,
+            )
             yield f"[ERROR]{str(exc)}"
 
     return StreamingResponse(generate(), media_type="text/event-stream")

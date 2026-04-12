@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 class ConversationCreate(BaseModel):
     title: Optional[str] = None
-    model: str = "gpt-4.1-mini"
+    model: str = "gpt-5.1-mini"
 
 
 class ConversationUpdate(BaseModel):

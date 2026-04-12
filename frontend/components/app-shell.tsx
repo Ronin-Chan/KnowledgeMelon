@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { Menu, Brain, BookOpen, Home, MessageSquare, Settings } from "lucide-react";
+import { Menu, Brain, BookOpen, Home, MessageSquare, Settings, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { useAuthStore } from "@/stores/auth";
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/knowledge", labelKey: "navKnowledge", icon: BookOpen },
   { href: "/memories", labelKey: "navMemories", icon: Brain },
   { href: "/settings", labelKey: "navSettings", icon: Settings },
+  { href: "/insights", labelKey: "navInsights", icon: BarChart3 },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
