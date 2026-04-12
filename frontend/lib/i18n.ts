@@ -453,6 +453,91 @@ const TRANSLATIONS: Record<Locale, Record<string, string>> = {
   },
 };
 
+const EXTRA_TRANSLATIONS: Record<Locale, Record<string, string>> = {
+  zh: {
+    navInsights: "指标",
+    chatSourcesTitle: "引用来源",
+    chatSourceChunkLabel: "第 {index} 片段 · 分数 {score}",
+    insightsTitle: "指标面板",
+    insightsSubtitle: "查看 RAG、记忆和知识库的核心数据。",
+    insightsUsage: "使用量",
+    insightsRetrieval: "检索",
+    insightsQuality: "回答质量",
+    insightsKnowledge: "知识库",
+    insightsMemory: "记忆",
+    insightsRecent: "最近记录",
+    insightsNoData: "暂无数据",
+    insightsRetrievalHitRate: "检索命中率",
+    insightsNoResultRate: "无结果率",
+    insightsCitationCoverageRate: "引用覆盖率",
+    insightsAnswerSuccessRate: "回答成功率",
+    insightsOneShotRate: "一次答对率",
+    insightsFollowUpRate: "追问率",
+    insightsHallucinationRate: "幻觉率",
+    insightsHumanCorrectionRate: "人工纠正率",
+    insightsTotalInteractions: "总交互",
+    insightsRagInteractions: "RAG 交互",
+    insightsAvgTopK: "平均 Top-K",
+    insightsAvgRetrieved: "平均召回数",
+    insightsArchivedDocuments: "已归档文档",
+    insightsDuplicateDocuments: "重复文档",
+    insightsActiveMemories: "活跃记忆",
+    insightsExpiredMemories: "过期记忆",
+    insightsRecentQuestion: "问题",
+    insightsRecentAnswer: "回答",
+    insightsRecentSources: "来源数",
+    insightsConversations: "对话数",
+    insightsDocuments: "文档数",
+    insightsMemories: "记忆数",
+    memoriesTtlDays: "记忆保留天数",
+    memoriesConflictPolicy: "冲突策略",
+    memoriesPolicyLatest: "最新优先",
+    memoriesPolicyImportance: "重要性优先",
+    memoriesPolicyMerge: "合并同义内容",
+  },
+  en: {
+    navInsights: "Insights",
+    chatSourcesTitle: "Sources",
+    chatSourceChunkLabel: "Chunk {index} · Score {score}",
+    insightsTitle: "Insights",
+    insightsSubtitle: "View the core RAG, memory, and knowledge metrics.",
+    insightsUsage: "Usage",
+    insightsRetrieval: "Retrieval",
+    insightsQuality: "Answer quality",
+    insightsKnowledge: "Knowledge base",
+    insightsMemory: "Memory",
+    insightsRecent: "Recent activity",
+    insightsNoData: "No data yet",
+    insightsRetrievalHitRate: "Retrieval hit rate",
+    insightsNoResultRate: "No-result rate",
+    insightsCitationCoverageRate: "Citation coverage",
+    insightsAnswerSuccessRate: "Answer success rate",
+    insightsOneShotRate: "One-shot rate",
+    insightsFollowUpRate: "Follow-up rate",
+    insightsHallucinationRate: "Hallucination rate",
+    insightsHumanCorrectionRate: "Human correction rate",
+    insightsTotalInteractions: "Total interactions",
+    insightsRagInteractions: "RAG interactions",
+    insightsAvgTopK: "Avg Top-K",
+    insightsAvgRetrieved: "Avg retrieved",
+    insightsArchivedDocuments: "Archived documents",
+    insightsDuplicateDocuments: "Duplicate documents",
+    insightsActiveMemories: "Active memories",
+    insightsExpiredMemories: "Expired memories",
+    insightsRecentQuestion: "Question",
+    insightsRecentAnswer: "Answer",
+    insightsRecentSources: "Sources",
+    insightsConversations: "Conversations",
+    insightsDocuments: "Documents",
+    insightsMemories: "Memories",
+    memoriesTtlDays: "Memory retention days",
+    memoriesConflictPolicy: "Conflict policy",
+    memoriesPolicyLatest: "Latest wins",
+    memoriesPolicyImportance: "Importance wins",
+    memoriesPolicyMerge: "Merge similar content",
+  },
+};
+
 function formatMessage(template: string, values?: TranslationValues) {
   if (!values) {
     return template;
@@ -473,8 +558,8 @@ export function useT() {
 
   return useMemo(() => {
     return (key: string, values?: TranslationValues) => {
-      const dictionary = TRANSLATIONS[locale] || TRANSLATIONS.zh;
-      const fallback = TRANSLATIONS.zh;
+      const dictionary = { ...(TRANSLATIONS[locale] || TRANSLATIONS.zh), ...(EXTRA_TRANSLATIONS[locale] || {}) };
+      const fallback = { ...TRANSLATIONS.zh, ...(EXTRA_TRANSLATIONS.zh || {}) };
       const template = dictionary[key] ?? fallback[key] ?? key;
       return formatMessage(template, values);
     };

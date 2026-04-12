@@ -12,10 +12,9 @@ import { v4 as uuidv4 } from "uuid";
 import {
     Plus,
     Search,
-    Grid3X3,
     BookOpen,
     Brain,
-    Settings,
+    Home,
     Menu,
     X,
     Paperclip,
@@ -26,6 +25,7 @@ import {
     Copy,
     RotateCcw,
     Trash2,
+    Link2,
 } from "lucide-react";
 import {
     Select,
@@ -110,6 +110,17 @@ interface PendingKnowledgeAttachment {
     name: string;
 }
 
+interface RetrievedSource {
+    id: string;
+    document_id: string;
+    document_title: string;
+    chunk_index: number;
+    content: string;
+    score: number;
+    reason: string;
+    chunk_hash?: string | null;
+}
+
 const DEFAULT_CONVERSATION_TITLES = new Set([
     "New conversation",
     "New chat",
@@ -174,6 +185,9 @@ export default function ChatPage() {
         string | null
     >(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [messageSources, setMessageSources] = useState<
+        Record<string, RetrievedSource[]>
+    >({});
     const [pendingDeleteConversation, setPendingDeleteConversation] = useState<
         string | null
     >(null);
@@ -184,6 +198,7 @@ export default function ChatPage() {
     const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
     const manualStopRef = useRef(false);
     const dragDepthRef = useRef(0);
+    const isRegeneratingRef = useRef(false);
     const {
         model,
         setModel,
@@ -362,6 +377,7 @@ export default function ChatPage() {
                         createdAt: m.created_at,
                     })),
                 );
+                setMessageSources({});
                 clearCurrentSessionAttachments();
                 // 设置当前模型。
                 const convModel = SUPPORTED_MODELS.find((m) => m.id === data.model);
@@ -867,6 +883,7 @@ export default function ChatPage() {
         }
 
         let assistantResponseText = "";
+        let retrievedSources: RetrievedSource[] = [];
         const userMessage: Message = {
             id: uuidv4(),
             role: "user",
@@ -881,6 +898,28 @@ export default function ChatPage() {
         try {
             const shouldUseAdvancedEndpoint = useRAG || useMemory || useTools;
             const endpoint = shouldUseAdvancedEndpoint ? "/api/chat/rag" : "/api/chat";
+            if (useRAG) {
+                try {
+                    const previewResponse = await apiFetch("/api/rag/preview", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            query: userMessage.content,
+                            apiKey,
+                            provider: currentModel?.provider || "openai",
+                            baseUrl: currentModel?.provider ? baseUrls[currentModel.provider] : undefined,
+                            limit: 5,
+                        }),
+                    });
+
+                    if (previewResponse.ok) {
+                        const previewData: { sources: RetrievedSource[] } = await previewResponse.json();
+                        retrievedSources = previewData.sources || [];
+                    }
+                } catch (error) {
+                    console.error("Failed to preview RAG sources:", error);
+                }
+            }
             // 构建历史消息（排除当前消息，最多50轮/100条）
             const MAX_HISTORY_MESSAGES = 100;
             const historyMessages = messages
@@ -898,6 +937,7 @@ export default function ChatPage() {
                 model,
                 baseUrl: currentModel?.provider ? baseUrls[currentModel.provider] : undefined,
                 response_length: responseLength,
+                is_regeneration: isRegeneratingRef.current,
                 attachments: sessionAttachments.map((attachment) => ({
                     name: attachment.name,
                     file_type: attachment.fileType,
@@ -975,12 +1015,20 @@ export default function ChatPage() {
                     ),
                 );
             }
+
+            if (retrievedSources.length > 0) {
+                setMessageSources((prev) => ({
+                    ...prev,
+                    [assistantMessage.id]: retrievedSources,
+                }));
+            }
         } catch (error) {
             console.error("Chat error:", error);
             const msg = error instanceof Error ? error.message : t("chatDeleteConversationFailed");
             setErrorMessage(`${msg}`);
         } finally {
             setIsLoading(false);
+            isRegeneratingRef.current = false;
             if (conversationId) {
                 const refreshedConversations = await fetchConversations();
                 if (createdConversationThisTurn) {
@@ -1026,6 +1074,7 @@ export default function ChatPage() {
         setMessages([]);
         setInput("");
         setCurrentConversationId(null);
+        setMessageSources({});
         clearCurrentSessionAttachments();
     };
 
@@ -1040,6 +1089,7 @@ export default function ChatPage() {
     };
 
     const handleRegenerate = async () => {
+        isRegeneratingRef.current = true;
         // 查找最后一条用户消息。
         const lastUserIndex = [...messages]
             .reverse()
@@ -1128,34 +1178,13 @@ export default function ChatPage() {
                     </div>
 
                     {/* 功能 */}
-                    <div className="mt-1 space-y-0.5">
+                    <div className="mt-1">
                         <Link
                             href="/"
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all cursor-pointer"
+                            className="flex items-center gap-3 rounded-xl border border-gray-200/80 dark:border-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all cursor-pointer"
                         >
-                            <Grid3X3 className="h-4 w-4" />
-                            {t("navHome")}
-                        </Link>
-                        <Link
-                            href="/knowledge"
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all cursor-pointer"
-                        >
-                            <BookOpen className="h-4 w-4" />
-                            {t("navKnowledge")}
-                        </Link>
-                        <Link
-                            href="/memories"
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all cursor-pointer"
-                        >
-                            <Brain className="h-4 w-4" />
-                            {t("navMemories")}
-                        </Link>
-                        <Link
-                            href="/settings"
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all cursor-pointer"
-                        >
-                            <Settings className="h-4 w-4" />
-                            {t("navSettings")}
+                            <Home className="h-4 w-4" />
+                            <span className="font-medium">{t("navHome")}</span>
                         </Link>
                     </div>
 
@@ -1164,42 +1193,42 @@ export default function ChatPage() {
                         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
                             {t("chatFeatureSwitch")}
                         </p>
-                        <div className="space-y-0.5">
+                        <div className="grid grid-cols-3 gap-1.5 px-1">
                             <button
                                 onClick={() => setUseRAG(!useRAG)}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all cursor-pointer w-full ${useRAG
+                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useRAG
                                     ? "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400"
                                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     }`}
                             >
                                 <BookOpen className="h-4 w-4" />
-                                <span className="flex-1 text-left">{t("chatRagToggle")}</span>
+                                <span className="text-center font-medium">{t("chatRagToggle")}</span>
                                 {useRAG && (
                                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                                 )}
                             </button>
                             <button
                                 onClick={() => setUseMemory(!useMemory)}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all cursor-pointer w-full ${useMemory
+                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useMemory
                                     ? "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400"
                                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     }`}
                             >
                                 <Brain className="h-4 w-4" />
-                                <span className="flex-1 text-left">{t("chatMemoryToggle")}</span>
+                                <span className="text-center font-medium">{t("chatMemoryToggle")}</span>
                                 {useMemory && (
                                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                                 )}
                             </button>
                             <button
                                 onClick={() => setUseTools(!useTools)}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all cursor-pointer w-full ${useTools
+                                className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] leading-none transition-all cursor-pointer ${useTools
                                     ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
                                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     }`}
                             >
                                 <Search className="h-4 w-4" />
-                                <span className="flex-1 text-left">{t("chatWebSearchToggle")}</span>
+                                <span className="text-center font-medium">{t("chatWebSearchToggle")}</span>
                                 {useTools && (
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 )}
@@ -1441,6 +1470,47 @@ export default function ChatPage() {
                                                 )
                                             )}
                                         </div>
+
+                                        {message.role === "assistant" &&
+                                            messageSources[message.id]?.length ? (
+                                            <div className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-3 text-left">
+                                                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                    <Link2 className="h-3.5 w-3.5" />
+                                                    {t("chatSourcesTitle")}
+                                                </div>
+                                                <div className="mt-3 space-y-2">
+                                                    {messageSources[message.id].map((source) => (
+                                                        <div
+                                                            key={source.id}
+                                                            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
+                                                        >
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                        {source.document_title}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        {t("chatSourceChunkLabel", {
+                                                                            index: source.chunk_index + 1,
+                                                                            score: source.score.toFixed(2),
+                                                                        })}
+                                                                    </p>
+                                                                </div>
+                                                                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-500">
+                                                                    {source.score.toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                            <p className="mt-2 max-h-20 overflow-hidden whitespace-pre-wrap text-xs leading-5 text-gray-600 dark:text-gray-300">
+                                                                {source.content}
+                                                            </p>
+                                                            <p className="mt-2 text-[11px] text-gray-400">
+                                                                {source.reason}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null}
 
                                         {/* 消息操作 - 仅助手消息显示 */}
                                         {message.role === "assistant" && (
@@ -1774,9 +1844,9 @@ export default function ChatPage() {
                             </p>
                         )}
 
-                        <p className="text-xs text-gray-400 text-center mt-3">
+                        {/* <p className="text-xs text-gray-400 text-center mt-3">
                             {t("chatDisclaimer")}
-                        </p>
+                        </p> */}
                     </div>
                 </div>
             </main>

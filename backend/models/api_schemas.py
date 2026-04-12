@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -24,6 +24,7 @@ class ChatRequest(BaseModel):
     apiKey: str
     model: str = "gpt-5.1-mini"
     baseUrl: Optional[str] = None
+    is_regeneration: bool = False
 
 
 class RAGChatRequest(BaseModel):
@@ -35,8 +36,9 @@ class RAGChatRequest(BaseModel):
     attachments: Optional[List[AttachmentInput]] = None
     conversationId: Optional[str] = None
     apiKey: str
-    model: str = "gpt-4.1-mini"
+    model: str = "gpt-5.1-mini"
     baseUrl: Optional[str] = None
+    is_regeneration: bool = False
 
 
 class DocumentResponse(BaseModel):
@@ -59,6 +61,54 @@ class SearchResult(BaseModel):
     chunk_index: int
 
 
+class RetrievedSource(BaseModel):
+    id: str
+    document_id: str
+    document_title: str
+    chunk_index: int
+    content: str
+    score: float
+    explanation: str
+    chunk_hash: Optional[str] = None
+
+
+class RetrievalPreviewRequest(BaseModel):
+    query: str
+    apiKey: str
+    provider: str = "openai"
+    baseUrl: Optional[str] = None
+    limit: int = 5
+
+
+class InteractionMetricResponse(BaseModel):
+    id: str
+    question: str
+    answer: Optional[str] = None
+    model: Optional[str] = None
+    mode: str
+    top_k: int
+    retrieved_count: int
+    no_result: bool
+    citation_count: int
+    citation_coverage: float
+    retrieval_hit_rate: float
+    answer_success: bool
+    first_try_answer: bool
+    follow_up_required: bool
+    hallucination_flag: bool
+    human_correction_flag: bool
+    retrieved_sources: List[dict[str, Any]]
+    created_at: datetime
+
+
+class MetricsSummaryResponse(BaseModel):
+    usage: dict[str, Any]
+    retrieval: dict[str, Any]
+    quality: dict[str, Any]
+    knowledge: dict[str, Any]
+    memory: dict[str, Any]
+
+
 class MemoryCreate(BaseModel):
     content: str
     category: str = "fact"
@@ -78,6 +128,15 @@ class MemoryResponse(BaseModel):
     source: str
     created_at: datetime
     access_count: int
+
+
+class MemorySettingsResponse(BaseModel):
+    auto_extract: bool
+    whitelist_topics: List[str]
+    blacklist_topics: List[str]
+    min_importance: int
+    memory_ttl_days: int = 180
+    memory_conflict_policy: str = "latest_wins"
 
 
 class UserRegisterRequest(BaseModel):

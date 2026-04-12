@@ -45,6 +45,9 @@ interface Document {
   file_type: string;
   status: string;
   created_at: string;
+  version?: number;
+  is_latest?: boolean;
+  source_name?: string;
 }
 
 interface Toast {
@@ -656,17 +659,16 @@ export default function KnowledgePage() {
 
   return (
     <AppShell>
-<div className="fixed top-4 right-4 z-50 space-y-2">
+      <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
-              toast.type === "success"
+            className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right fade-in duration-200 ${toast.type === "success"
                 ? "bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
                 : toast.type === "error"
                   ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
                   : "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
-            }`}
+              }`}
           >
             {toast.type === "success" && <Check className="h-4 w-4" />}
             {toast.type === "error" && <AlertCircle className="h-4 w-4" />}
@@ -675,7 +677,7 @@ export default function KnowledgePage() {
           </div>
         ))}
       </div>
-<aside className="hidden">
+      <aside className="hidden">
         <div className="p-4">
           <Link
             href="/chat"
@@ -701,9 +703,9 @@ export default function KnowledgePage() {
           </Link>
         </nav>
       </aside>
-<main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-semibold mb-2">{t("knowledgeTitle")}</h1>
               <p className="text-muted-foreground">{t("knowledgeSubtitle")}</p>
@@ -741,13 +743,12 @@ export default function KnowledgePage() {
           <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  selfOllamaServiceReady
+                className={`w-2 h-2 rounded-full ${selfOllamaServiceReady
                     ? selfOllamaModelReady
                       ? "bg-emerald-500"
                       : "bg-amber-500"
                     : "bg-gray-400"
-                }`}
+                  }`}
               />
               <div>
                 <p className="text-sm font-medium">
@@ -765,16 +766,14 @@ export default function KnowledgePage() {
             <button
               onClick={() => setUseLocalEmbedding(!useLocalEmbedding)}
               disabled={!selfOllamaServiceReady}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                useLocalEmbedding && selfOllamaServiceReady
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useLocalEmbedding && selfOllamaServiceReady
                   ? "bg-emerald-500"
                   : "bg-gray-200 dark:bg-gray-700"
-              } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${!selfOllamaServiceReady ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  useLocalEmbedding ? "translate-x-6" : "translate-x-1"
-                }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useLocalEmbedding ? "translate-x-6" : "translate-x-1"
+                  }`}
               />
             </button>
           </div>
@@ -825,16 +824,15 @@ export default function KnowledgePage() {
               </div>
             </div>
           )}
-<div
+          <div
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-all cursor-pointer ${
-              isDragging
+            className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-all cursor-pointer ${isDragging
                 ? "border-primary bg-primary/5"
                 : "border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600"
-            }`}
+              }`}
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mx-auto mb-3">
@@ -862,7 +860,7 @@ export default function KnowledgePage() {
               </>
             )}
           </div>
-<div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -897,14 +895,24 @@ export default function KnowledgePage() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span>{doc.file_type.toUpperCase()}</span>
                               <span>•</span>
+                              <span>v{doc.version ?? 1}</span>
+                              <span>•</span>
                               <span>{new Date(doc.created_at).toLocaleDateString()}</span>
                               <span>•</span>
                               <span className="flex items-center gap-1">
                                 {getStatusIcon(doc.status)}
                                 {getStatusText(doc.status)}
                               </span>
+                              {doc.is_latest && (
+                                <>
+                                  <span>•</span>
+                                  <span className="rounded-full bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+                                    {locale === "zh" ? "最新" : "Latest"}
+                                  </span>
+                                </>
+                              )}
                             </div>
-{doc.status === "processing" &&
+                            {doc.status === "processing" &&
                               processingStatus[doc.id]?.progress && (
                                 <div className="mt-2">
                                   <div className="flex items-center gap-2 text-xs">
@@ -949,11 +957,10 @@ export default function KnowledgePage() {
                               handleViewDocument(doc);
                             }}
                             disabled={!canPreview}
-                            className={`p-2 rounded-lg transition-colors ${
-                              canPreview
+                            className={`p-2 rounded-lg transition-colors ${canPreview
                                 ? "hover:bg-primary/10 hover:text-primary"
                                 : "opacity-40 cursor-not-allowed"
-                            }`}
+                              }`}
                             title={
                               canPreview
                                 ? t("knowledgeViewParsed")
@@ -982,189 +989,189 @@ export default function KnowledgePage() {
           </div>
         </div>
       </main>
-<Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
+      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
           {viewingDoc && (
             <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-<div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h2 className="font-semibold">{viewingDoc.title}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {viewingDoc.file_type.toUpperCase()} •{" "}
-                    {new Date(viewingDoc.created_at).toLocaleDateString()}
-                  </p>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <h2 className="font-semibold">{viewingDoc.title}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {viewingDoc.file_type.toUpperCase()} •{" "}
+                      {new Date(viewingDoc.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={closeViewModal}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={closeViewModal}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-{docInfo.total_pages && (
-              <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <FileDigit className="h-3.5 w-3.5" />
-                  {t("knowledgeTotalPages", { count: docInfo.total_pages })}
-                </span>
-                {docInfo.file_size_mb && <span>•</span>}
-                {!isPdfPreview && (
-                  <span>•</span>
-                )}
-                {!isPdfPreview && currentPage < docInfo.total_pages && (
-                  <span className="text-amber-500">
-                    ({t("knowledgeScrollForMore")})
+              {docInfo.total_pages && (
+                <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <FileDigit className="h-3.5 w-3.5" />
+                    {t("knowledgeTotalPages", { count: docInfo.total_pages })}
                   </span>
-                )}
-              </div>
-            )}
-<div
-              ref={contentContainerRef}
-              className="flex-1 overflow-y-auto p-6"
-              onScroll={(e) => {
-                const target = e.target as HTMLDivElement;
-                const nearBottom =
-                  target.scrollHeight - target.scrollTop - target.clientHeight <
-                  100;
-                if (
-                  nearBottom &&
-                  docInfo.total_pages &&
-                  !isPdfPreview &&
-                  currentPage < docInfo.total_pages &&
-                  !isLoadingContent &&
-                  !isLoadingMore
-                ) {
-                  void loadMorePages();
-                }
-              }}
-            >
-              {isLoadingContent ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">
-                    {t("knowledgeLoadingDocumentContent")}
-                  </p>
-                </div>
-              ) : isPdfPreview ? (
-                <div className="h-full min-h-[480px] rounded-lg overflow-hidden border border-border bg-muted/30">
-                  <iframe
-                    src={`${API_BASE_URL}/api/documents/${viewingDoc.id}/file`}
-                    title={viewingDoc.title}
-                    className="w-full h-full min-h-[480px]"
-                  />
-                </div>
-              ) : isMarkdownPreview ? (
-                <div className="max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ href, children }) => (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary underline underline-offset-2"
-                        >
-                          {children}
-                        </a>
-                      ),
-                      code: ({ className, children, ...props }) => {
-                        const isInline = !className?.includes("language-");
-                        return isInline ? (
-                          <code
-                            className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        ) : (
-                          <pre className="my-4 overflow-x-auto rounded-xl bg-muted p-4">
-                            <code className="font-mono text-sm leading-6" {...props}>
-                              {children}
-                            </code>
-                          </pre>
-                        );
-                      },
-                      h1: ({ children }) => <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">{children}</h1>,
-                      h2: ({ children }) => <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">{children}</h2>,
-                      h3: ({ children }) => <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">{children}</h3>,
-                      p: ({ children }) => <p className="my-3 leading-7">{children}</p>,
-                      ul: ({ children }) => <ul className="my-4 ml-6 list-disc space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="my-4 ml-6 list-decimal space-y-1">{children}</ol>,
-                      li: ({ children }) => <li className="leading-7">{children}</li>,
-                      table: ({ children }) => (
-                        <div className="my-4 overflow-x-auto">
-                          <table className="w-full border-collapse border border-border">{children}</table>
-                        </div>
-                      ),
-                      th: ({ children }) => (
-                        <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>
-                      ),
-                      td: ({ children }) => (
-                        <td className="border border-border px-3 py-2 align-top">{children}</td>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
-                          {children}
-                        </blockquote>
-                      ),
-                    }}
-                  >
-                    {docContent}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <div className="max-w-none">
-                  <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
-                    {docContent}
-                  </pre>
-{docInfo.total_pages && currentPage < docInfo.total_pages && (
-                    <div className="flex flex-col items-center justify-center py-6 gap-2">
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {t("knowledgeLoadingMoreContent")}
-                          </span>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => void loadMorePages()}
-                          className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
-                        >
-                          {t("knowledgeLoadNextBatch")}
-                        </button>
-                      )}
-                    </div>
+                  {docInfo.file_size_mb && <span>•</span>}
+                  {!isPdfPreview && (
+                    <span>•</span>
+                  )}
+                  {!isPdfPreview && currentPage < docInfo.total_pages && (
+                    <span className="text-amber-500">
+                      ({t("knowledgeScrollForMore")})
+                    </span>
                   )}
                 </div>
               )}
-            </div>
-<div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
-{docInfo.total_pages &&
-                docInfo.total_pages > 1 &&
-                !isPdfPreview && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {t("knowledgeLoadedPages", {
-                        current: Math.min(currentPage, docInfo.total_pages),
-                        total: docInfo.total_pages,
-                      })}
-                    </span>
+              <div
+                ref={contentContainerRef}
+                className="flex-1 overflow-y-auto p-6"
+                onScroll={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  const nearBottom =
+                    target.scrollHeight - target.scrollTop - target.clientHeight <
+                    100;
+                  if (
+                    nearBottom &&
+                    docInfo.total_pages &&
+                    !isPdfPreview &&
+                    currentPage < docInfo.total_pages &&
+                    !isLoadingContent &&
+                    !isLoadingMore
+                  ) {
+                    void loadMorePages();
+                  }
+                }}
+              >
+                {isLoadingContent ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">
+                      {t("knowledgeLoadingDocumentContent")}
+                    </p>
+                  </div>
+                ) : isPdfPreview ? (
+                  <div className="h-full min-h-[480px] rounded-lg overflow-hidden border border-border bg-muted/30">
+                    <iframe
+                      src={`${API_BASE_URL}/api/documents/${viewingDoc.id}/file`}
+                      title={viewingDoc.title}
+                      className="w-full h-full min-h-[480px]"
+                    />
+                  </div>
+                ) : isMarkdownPreview ? (
+                  <div className="max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ href, children }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline underline-offset-2"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({ className, children, ...props }) => {
+                          const isInline = !className?.includes("language-");
+                          return isInline ? (
+                            <code
+                              className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]"
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          ) : (
+                            <pre className="my-4 overflow-x-auto rounded-xl bg-muted p-4">
+                              <code className="font-mono text-sm leading-6" {...props}>
+                                {children}
+                              </code>
+                            </pre>
+                          );
+                        },
+                        h1: ({ children }) => <h1 className="mt-6 mb-3 text-3xl font-semibold tracking-tight">{children}</h1>,
+                        h2: ({ children }) => <h2 className="mt-6 mb-3 text-2xl font-semibold tracking-tight">{children}</h2>,
+                        h3: ({ children }) => <h3 className="mt-5 mb-2 text-xl font-semibold tracking-tight">{children}</h3>,
+                        p: ({ children }) => <p className="my-3 leading-7">{children}</p>,
+                        ul: ({ children }) => <ul className="my-4 ml-6 list-disc space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="my-4 ml-6 list-decimal space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="leading-7">{children}</li>,
+                        table: ({ children }) => (
+                          <div className="my-4 overflow-x-auto">
+                            <table className="w-full border-collapse border border-border">{children}</table>
+                          </div>
+                        ),
+                        th: ({ children }) => (
+                          <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="border border-border px-3 py-2 align-top">{children}</td>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
+                            {children}
+                          </blockquote>
+                        ),
+                      }}
+                    >
+                      {docContent}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="max-w-none">
+                    <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
+                      {docContent}
+                    </pre>
+                    {docInfo.total_pages && currentPage < docInfo.total_pages && (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2">
+                        {isLoadingMore ? (
+                          <>
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">
+                              {t("knowledgeLoadingMoreContent")}
+                            </span>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => void loadMorePages()}
+                            className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
+                          >
+                            {t("knowledgeLoadNextBatch")}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  onClick={closeViewModal}
-                  className="px-4 py-2 rounded-lg bg-background border border-border hover:bg-muted transition-colors text-sm font-medium"
-                >
-                  {t("knowledgeClose")}
-                </button>
               </div>
-            </div>
+              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-muted/30">
+                {docInfo.total_pages &&
+                  docInfo.total_pages > 1 &&
+                  !isPdfPreview && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {t("knowledgeLoadedPages", {
+                          current: Math.min(currentPage, docInfo.total_pages),
+                          total: docInfo.total_pages,
+                        })}
+                      </span>
+                    </div>
+                  )}
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    onClick={closeViewModal}
+                    className="px-4 py-2 rounded-lg bg-background border border-border hover:bg-muted transition-colors text-sm font-medium"
+                  >
+                    {t("knowledgeClose")}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
