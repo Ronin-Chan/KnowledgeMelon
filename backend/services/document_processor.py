@@ -71,7 +71,7 @@ class DocumentProcessor:
         # 触发回调。
         self._trigger_callbacks(job_id, job)
 
-    def complete_job(self, job_id: str, chunks_count: int = 0):
+    def complete_job(self, job_id: str, chunks_count: int = 0, message: str | None = None):
         """标记任务已完成。"""
         if job_id not in self.jobs:
             return
@@ -79,7 +79,7 @@ class DocumentProcessor:
         job = self.jobs[job_id]
         job.status = "completed"
         job.progress = 100
-        job.message = f"处理完成，生成 {chunks_count} 个文本块"
+        job.message = message or f"处理完成，生成 {chunks_count} 个文本块"
         job.updated_at = datetime.utcnow()
         self._trigger_callbacks(job_id, job)
 
@@ -136,3 +136,4 @@ class DocumentProcessor:
 
 # 全局处理器实例。
 document_processor = DocumentProcessor()
+

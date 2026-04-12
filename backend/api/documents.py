@@ -15,7 +15,7 @@ from models.entities import Document, DocumentChunk, User
 from services.document_processor import document_processor
 from services.document_service import document_service
 from services.embedding_service import embedding_service
-from services.file_types import SUPPORTED_FILE_EXTENSIONS
+from services.file_types import IMAGE_FILE_EXTENSIONS, SUPPORTED_FILE_EXTENSIONS
 from services.rag_service import rag_service
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -133,7 +133,20 @@ async def _process_document_async(
 
             doc.status = "completed"
             await session.commit()
-            document_processor.complete_job(job_id, len(chunks))
+            if len(chunks) == 0 and file_ext in IMAGE_FILE_EXTENSIONS:
+                document_processor.complete_job(
+                    job_id,
+                    0,
+                    "图片已处理完成，未识别到可提取文字",
+                )
+            elif len(chunks) == 0:
+                document_processor.complete_job(
+                    job_id,
+                    0,
+                    "处理完成，未生成可检索文本",
+                )
+            else:
+                document_processor.complete_job(job_id, len(chunks))
         except Exception as exc:
             await session.rollback()
             doc = await session.get(Document, document_id)

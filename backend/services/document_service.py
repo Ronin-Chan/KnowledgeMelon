@@ -3,6 +3,8 @@ import hashlib
 import json
 import os
 import asyncio
+import shutil
+import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from typing import List
@@ -53,11 +55,6 @@ try:
     from striprtf.striprtf import rtf_to_text
 except ImportError:
     rtf_to_text = None
-
-try:
-    import textract
-except ImportError:
-    textract = None
 
 try:
     import xlrd
@@ -148,7 +145,7 @@ class DocumentService:
         elif file_type == ".docx":
             return await asyncio.to_thread(self._parse_docx, file_path)
         elif file_type in [".doc", ".ppt"]:
-            return await asyncio.to_thread(self._parse_binary_with_textract, file_path)
+            return await asyncio.to_thread(self._parse_binary_office, file_path, file_type)
         elif file_type == ".pptx":
             return await asyncio.to_thread(self._parse_pptx, file_path)
         elif file_type == ".xlsx":
@@ -386,14 +383,28 @@ class DocumentService:
             text += para.text + "\n"
         return text
 
-    def _parse_binary_with_textract(self, file_path: str) -> str:
-        if textract is None:
-            raise ValueError("Binary office files require textract to be installed")
+    def _parse_binary_office(self, file_path: str, file_type: str) -> str:
+        command_name = "catppt" if file_type == ".ppt" else "catdoc"
+        executable = shutil.which(command_name)
+        if executable is None:
+            raise ValueError(
+                f"{file_type.upper()} parsing requires {command_name} to be installed"
+            )
 
-        output = textract.process(file_path)
-        if isinstance(output, bytes):
-            return output.decode("utf-8", errors="ignore")
-        return str(output or "")
+        try:
+            result = subprocess.run(
+                [executable, file_path],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except Exception as exc:
+            raise ValueError(f"Failed to parse {file_type.upper()} file: {exc}") from exc
+
+        output = (result.stdout or result.stderr or "").strip()
+        if not output:
+            raise ValueError(f"No text extracted from {file_type.upper()} file")
+        return output
 
     def _parse_pptx(self, file_path: str) -> str:
         if Presentation is None:
@@ -518,18 +529,42 @@ class DocumentService:
 
     def _parse_image(self, file_path: str) -> str:
         if RapidOCR is None:
-            raise ValueError("Image OCR requires rapidocr-onnxruntime to be installed")
-        ocr_engine = RapidOCR()
-        result, _ = ocr_engine(file_path)
+            return ""
+
+        try:
+            ocr_engine = RapidOCR()
+            result = ocr_engine(file_path)
+        except Exception:
+            return ""
+
+        if isinstance(result, tuple):
+            result = result[0]
+
         if not result:
             return ""
+
         lines: list[str] = []
         for item in result:
-            if isinstance(item, list) and len(item) >= 2:
-                text = str(item[1]).strip()
-                if text:
-                    lines.append(text)
-        return "\n".join(lines)
+            text = ""
+            if isinstance(item, (list, tuple)):
+                if len(item) >= 2:
+                    text = str(item[1]).strip()
+                elif len(item) == 1:
+                    text = str(item[0]).strip()
+            elif isinstance(item, dict):
+                text = str(
+                    item.get("text")
+                    or item.get("transcription")
+                    or item.get("value")
+                    or ""
+                ).strip()
+            else:
+                text = str(item).strip()
+
+            if text:
+                lines.append(text)
+
+        return "\n".join(lines).strip()
 
     def _normalize_cell_value(self, value) -> str:
         if value is None:

@@ -78,6 +78,7 @@ async def _parse_temporary_attachment(file: UploadFile) -> dict:
             "file_type": file_ext,
             "content": parsed_text[:16000],
             "truncated": len(parsed_text) > 16000,
+            "has_text": bool(parsed_text),
         }
     finally:
         if temp_path and os.path.exists(temp_path):
@@ -115,6 +116,7 @@ async def chat(
 ):
     optimized_context = []
     retrieved_sources: list[dict] = []
+    assistant_message_id = None
     if request.conversationId:
         optimized_context = await conversation_service.get_optimized_context(
             session=session,
@@ -152,7 +154,7 @@ async def chat(
                 yield chunk
 
             if request.conversationId:
-                await conversation_service.add_message(
+                assistant_message = await conversation_service.add_message(
                     session=session,
                     conversation_id=request.conversationId,
                     user_id=current_user.id,
@@ -160,6 +162,7 @@ async def chat(
                     content=assistant_content,
                     model=request.model,
                 )
+                assistant_message_id = str(assistant_message.id)
                 await conversation_service.generate_conversation_title(
                     session=session,
                     conversation_id=request.conversationId,
@@ -185,6 +188,7 @@ async def chat(
                 session,
                 user_id=current_user.id,
                 conversation_id=request.conversationId,
+                message_id=assistant_message_id,
                 question=request.message,
                 answer=assistant_content,
                 model=request.model,
@@ -204,6 +208,7 @@ async def chat(
                 session,
                 user_id=current_user.id,
                 conversation_id=request.conversationId,
+                message_id=assistant_message_id,
                 question=request.message,
                 answer=assistant_content,
                 model=request.model,
@@ -229,6 +234,7 @@ async def chat_with_rag(
 ):
     optimized_context = []
     retrieved_sources: list[dict] = []
+    assistant_message_id = None
     if request.conversationId:
         optimized_context = await conversation_service.get_optimized_context(
             session=session,
@@ -275,7 +281,7 @@ async def chat_with_rag(
                 yield chunk
 
             if request.conversationId:
-                await conversation_service.add_message(
+                assistant_message = await conversation_service.add_message(
                     session=session,
                     conversation_id=request.conversationId,
                     user_id=current_user.id,
@@ -283,6 +289,7 @@ async def chat_with_rag(
                     content=assistant_content,
                     model=request.model,
                 )
+                assistant_message_id = str(assistant_message.id)
                 await conversation_service.generate_conversation_title(
                     session=session,
                     conversation_id=request.conversationId,
@@ -318,6 +325,7 @@ async def chat_with_rag(
                 session,
                 user_id=current_user.id,
                 conversation_id=request.conversationId,
+                message_id=assistant_message_id,
                 question=request.message,
                 answer=assistant_content,
                 model=request.model,
@@ -337,6 +345,7 @@ async def chat_with_rag(
                 session,
                 user_id=current_user.id,
                 conversation_id=request.conversationId,
+                message_id=assistant_message_id,
                 question=request.message,
                 answer=assistant_content,
                 model=request.model,

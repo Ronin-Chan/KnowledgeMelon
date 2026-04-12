@@ -24,6 +24,7 @@ class ChatRequest(BaseModel):
     apiKey: str
     model: str = "gpt-5.1-mini"
     baseUrl: Optional[str] = None
+    response_length: str = "balanced"
     is_regeneration: bool = False
 
 
@@ -38,6 +39,7 @@ class RAGChatRequest(BaseModel):
     apiKey: str
     model: str = "gpt-5.1-mini"
     baseUrl: Optional[str] = None
+    response_length: str = "balanced"
     is_regeneration: bool = False
 
 

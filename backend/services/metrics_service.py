@@ -24,6 +24,7 @@ class MetricsService:
         *,
         user_id,
         conversation_id: Optional[str],
+        message_id: Optional[str] = None,
         question: str,
         answer: str,
         model: Optional[str],
@@ -49,6 +50,7 @@ class MetricsService:
         metric = InteractionMetric(
             user_id=user_id,
             conversation_id=conversation_id,
+            message_id=message_id,
             question=question,
             answer=answer,
             model=model,

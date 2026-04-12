@@ -24,6 +24,10 @@ import {
   SUPPORTED_FILE_ACCEPT,
   SUPPORTED_FILE_EXTENSIONS,
   SUPPORTED_FILE_LABEL,
+  getFileTypeCategory,
+  getFileTypeLabel,
+  getFileTypePreviewCopy,
+  getFileTypeTheme,
 } from "@/lib/file-types";
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import Link from "next/link";
@@ -44,6 +48,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
 
 interface Document {
@@ -101,6 +107,7 @@ export default function KnowledgePage() {
   const [nextStartPage, setNextStartPage] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pagesPerLoad] = useState<number>(20);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const previewRequestTokenRef = useRef<number>(0);
@@ -220,7 +227,15 @@ export default function KnowledgePage() {
     return () => clearInterval(interval);
   }, [documents, fetchDocuments, fetchProcessingStatus]);
 
-  const processFile = async (file: File) => {
+  const processFile = async (
+    file: File,
+    options?: {
+      currentIndex?: number;
+      totalCount?: number;
+      showSuccessToast?: boolean;
+      manageLoadingState?: boolean;
+    },
+  ) => {
     if (!embeddingConfig) {
       showToast(
         "error",
@@ -241,14 +256,28 @@ export default function KnowledgePage() {
       return;
     }
 
-    setIsUploading(true);
-    setUploadProgress(t("knowledgeUploadLoading"));
+    if (options?.manageLoadingState ?? true) {
+      setIsUploading(true);
+    }
+    const batchPrefix =
+      options?.currentIndex && options?.totalCount
+        ? ` (${options.currentIndex}/${options.totalCount})`
+        : "";
+    setUploadProgress(`${t("fileStatusProcessing")}${batchPrefix}`);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      setUploadProgress(t("knowledgeLoadingDocumentContent"));
+      setUploadProgress(
+        options?.currentIndex && options?.totalCount
+          ? t("knowledgeUploadBatchProgress", {
+              current: options.currentIndex,
+              total: options.totalCount,
+              name: file.name,
+            })
+          : t("fileStatusParsing"),
+      );
       const params = new URLSearchParams();
       if (!embeddingConfig.useLocalEmbedding) {
         params.append("api_key", embeddingConfig.apiKey);
@@ -272,9 +301,12 @@ export default function KnowledgePage() {
 
       if (response.ok) {
         await response.json();
-        showToast("success", t("knowledgeUploadSuccess", { name: file.name }));
+        if (options?.showSuccessToast ?? true) {
+          showToast("success", t("fileStatusUploaded", { name: file.name }));
+        }
         await fetchDocuments();
         window.dispatchEvent(new Event("knowledge-documents-updated"));
+        return true;
       } else {
         let errorMsg = t("knowledgeUploadFailed");
         try {
@@ -285,16 +317,75 @@ export default function KnowledgePage() {
           errorMsg = await response.text();
         }
         showToast("error", `${t("knowledgeUploadFailed")}: ${errorMsg}`);
+        return false;
       }
     } catch (error) {
       console.error("Upload error:", error);
       showToast("error", t("knowledgeUploadDocumentFailed"));
+      return false;
     } finally {
-      setIsUploading(false);
-      setUploadProgress("");
+      if (options?.manageLoadingState ?? true) {
+        setIsUploading(false);
+        setUploadProgress("");
+      }
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const processFiles = async (files: File[]) => {
+    const totalCount = files.length;
+    if (totalCount === 0) return;
+
+    showToast("info", t("knowledgeUploadBatchStarting", { count: totalCount }));
+    setIsUploading(true);
+
+    let successCount = 0;
+    let failureCount = 0;
+    const perFileErrors: string[] = [];
+
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      const ok = await processFile(file, {
+        currentIndex: index + 1,
+        totalCount,
+        showSuccessToast: totalCount === 1,
+        manageLoadingState: false,
+      });
+      if (ok) {
+        successCount += 1;
+      } else {
+        failureCount += 1;
+        perFileErrors.push(file.name);
+      }
+    }
+
+    if (totalCount > 1) {
+      const summary =
+        failureCount === 0
+          ? t("knowledgeUploadBatchComplete", {
+              success: successCount,
+              total: totalCount,
+            })
+          : `${t("knowledgeUploadBatchComplete", {
+              success: successCount,
+              total: totalCount,
+            })}，${t("knowledgeUploadBatchPartial", {
+              success: successCount,
+              failed: failureCount,
+            })}`;
+      showToast(failureCount === 0 ? "success" : "info", summary);
+
+      if (perFileErrors.length > 0) {
+        console.info("Failed uploaded files:", perFileErrors);
+      }
+    }
+
+    setIsUploading(false);
+    setUploadProgress("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -303,9 +394,7 @@ export default function KnowledgePage() {
   ) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
-    for (const file of files) {
-      await processFile(file);
-    }
+    await processFiles(files);
   };
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -329,9 +418,9 @@ export default function KnowledgePage() {
     e.stopPropagation();
     setIsDragging(false);
 
-    const files = e.dataTransfer.files;
+    const files = Array.from(e.dataTransfer.files ?? []);
     if (files.length > 0) {
-      await processFile(files[0]);
+      await processFiles(files);
     }
   };
 
@@ -391,6 +480,7 @@ export default function KnowledgePage() {
     setDocInfo({});
     setCurrentPage(0);
     setNextStartPage(null);
+    setPdfPreviewUrl(null);
 
     const isPDF = doc.file_type === ".pdf";
 
@@ -422,6 +512,30 @@ export default function KnowledgePage() {
           });
           setCurrentPage(0);
           setNextStartPage(null);
+          try {
+            const fileResponse = await apiFetch(
+              `${API_BASE_URL}/api/documents/${doc.id}/file`,
+            );
+            if (fileResponse.ok) {
+              const blob = await fileResponse.blob();
+              const objectUrl = window.URL.createObjectURL(blob);
+              setPdfPreviewUrl((prev) => {
+                if (prev) {
+                  window.URL.revokeObjectURL(prev);
+                }
+                return objectUrl;
+              });
+            } else {
+              showToast("error", t("knowledgeLoadPreviewFailed"));
+              setViewingDoc(null);
+              return;
+            }
+          } catch (error) {
+            console.error("PDF preview file error:", error);
+            showToast("error", t("knowledgeLoadPreviewFailed"));
+            setViewingDoc(null);
+            return;
+          }
         } else {
           showToast("error", t("knowledgeLoadPreviewInfoFailed"));
           setViewingDoc(null);
@@ -622,6 +736,10 @@ export default function KnowledgePage() {
     setDocInfo({});
     setCurrentPage(0);
     setNextStartPage(null);
+    if (pdfPreviewUrl) {
+      window.URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
     setIsLoadingContent(false);
     setIsLoadingMore(false);
   };
@@ -632,6 +750,14 @@ export default function KnowledgePage() {
       loadMoreAbortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        window.URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -660,116 +786,156 @@ export default function KnowledgePage() {
   };
 
   const getDocumentTypeIcon = (fileType: string) => {
-    const normalizedType = fileType.toLowerCase();
-    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
+    const category = getFileTypeCategory(fileType);
+    if (category === "image") {
       return ImageIcon;
     }
-    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
+    if (category === "table") {
       return FileDigit;
     }
-    if ([".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
+    if (category === "code" || category === "structured") {
       return FileCode2;
     }
     return FileText;
   };
 
   const getDocumentTypeLabel = (fileType: string) => {
-    const normalizedType = fileType.toLowerCase();
-    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
-      return locale === "zh" ? "截图" : "Image";
-    }
-    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
-      return locale === "zh" ? "表格" : "Spreadsheet";
-    }
-    if ([".py", ".js", ".ts", ".java", ".go"].includes(normalizedType)) {
-      return locale === "zh" ? "代码" : "Code";
-    }
-    if ([".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
-      return locale === "zh" ? "结构化/日志" : "Structured";
-    }
-    if ([".doc", ".docx", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".html", ".htm", ".rtf"].includes(normalizedType)) {
-      return locale === "zh" ? "文档" : "Document";
-    }
-    return normalizedType.replace(".", "").toUpperCase();
+    return getFileTypeLabel(fileType, locale);
   };
 
   const getDocumentTypeBadgeClassName = (fileType: string) => {
-    const normalizedType = fileType.toLowerCase();
-    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
-      return "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300";
-    }
-    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
-      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300";
-    }
-    if ([".py", ".js", ".ts", ".java", ".go"].includes(normalizedType)) {
-      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300";
-    }
-    if ([".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
-      return "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300";
-    }
-    if ([".doc", ".docx", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".html", ".htm", ".rtf"].includes(normalizedType)) {
-      return "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300";
-    }
-    return "bg-muted text-muted-foreground";
+    return getFileTypeTheme(fileType).chipClassName;
   };
 
   const getDocumentTypeTheme = (fileType: string) => {
-    const normalizedType = fileType.toLowerCase();
-    if ([".png", ".jpg", ".jpeg", ".webp"].includes(normalizedType)) {
-      return {
-        iconBg: "bg-fuchsia-100 dark:bg-fuchsia-950/50",
-        iconText: "text-fuchsia-700 dark:text-fuchsia-300",
-        panelBg: "bg-fuchsia-50/70 dark:bg-fuchsia-950/20",
-        panelBorder: "border-fuchsia-200 dark:border-fuchsia-900",
-        progressBar: "bg-fuchsia-500",
-      };
-    }
-    if ([".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType)) {
-      return {
-        iconBg: "bg-emerald-100 dark:bg-emerald-950/50",
-        iconText: "text-emerald-700 dark:text-emerald-300",
-        panelBg: "bg-emerald-50/70 dark:bg-emerald-950/20",
-        panelBorder: "border-emerald-200 dark:border-emerald-900",
-        progressBar: "bg-emerald-500",
-      };
-    }
-    if ([".py", ".js", ".ts", ".java", ".go"].includes(normalizedType)) {
-      return {
-        iconBg: "bg-indigo-100 dark:bg-indigo-950/50",
-        iconText: "text-indigo-700 dark:text-indigo-300",
-        panelBg: "bg-indigo-50/70 dark:bg-indigo-950/20",
-        panelBorder: "border-indigo-200 dark:border-indigo-900",
-        progressBar: "bg-indigo-500",
-      };
-    }
-    if ([".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(normalizedType)) {
-      return {
-        iconBg: "bg-amber-100 dark:bg-amber-950/50",
-        iconText: "text-amber-700 dark:text-amber-300",
-        panelBg: "bg-amber-50/70 dark:bg-amber-950/20",
-        panelBorder: "border-amber-200 dark:border-amber-900",
-        progressBar: "bg-amber-500",
-      };
-    }
-    if ([".doc", ".docx", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".html", ".htm", ".rtf"].includes(normalizedType)) {
-      return {
-        iconBg: "bg-sky-100 dark:bg-sky-950/50",
-        iconText: "text-sky-700 dark:text-sky-300",
-        panelBg: "bg-sky-50/70 dark:bg-sky-950/20",
-        panelBorder: "border-sky-200 dark:border-sky-900",
-        progressBar: "bg-sky-500",
-      };
-    }
-    return {
-      iconBg: "bg-muted",
-      iconText: "text-muted-foreground",
-      panelBg: "bg-white/70 dark:bg-muted/20",
-      panelBorder: "border-border",
-      progressBar: "bg-blue-500",
-    };
+    return getFileTypeTheme(fileType);
   };
 
   const processingDocuments = documents.filter((doc) => doc.status === "processing");
+
+  const isTableLikeFile = (fileType: string) => {
+    const normalizedType = fileType.toLowerCase();
+    return [".csv", ".tsv", ".xlsx", ".xls"].includes(normalizedType);
+  };
+
+  const parseTabularPreview = (content: string) => {
+    const lines = content
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter((line) => line.trim().length > 0);
+
+    const sections: Array<{ title: string; rows: string[][] }> = [];
+    let currentTitle = "";
+    let currentRows: string[][] = [];
+
+    const pushSection = () => {
+      if (currentTitle || currentRows.length > 0) {
+        sections.push({
+          title: currentTitle || (locale === "zh" ? "工作表" : "Sheet"),
+          rows: currentRows,
+        });
+      }
+      currentTitle = "";
+      currentRows = [];
+    };
+
+    const splitRow = (line: string) => {
+      const trimmed = line.trim();
+      if (trimmed.includes("\t")) {
+        return trimmed.split("\t").map((cell) => cell.trim());
+      }
+      if (trimmed.includes(",")) {
+        return trimmed.split(",").map((cell) => cell.trim());
+      }
+      const spaced = trimmed.split(/\s{2,}/).map((cell) => cell.trim());
+      if (spaced.length > 1) {
+        return spaced;
+      }
+      return trimmed.split(/\s+/).map((cell) => cell.trim());
+    };
+
+    for (const line of lines) {
+      const sheetMatch = line.match(/^---\s*Sheet:\s*(.+?)\s*---$/i);
+      if (sheetMatch) {
+        pushSection();
+        currentTitle = sheetMatch[1];
+        continue;
+      }
+      currentRows.push(splitRow(line).filter(Boolean));
+    }
+
+    pushSection();
+    return sections.length > 0 ? sections : [{ title: locale === "zh" ? "内容" : "Content", rows: lines.map(splitRow) }];
+  };
+
+  const renderTabularPreview = (content: string, fileType: string) => {
+    const theme = getDocumentTypeTheme(fileType);
+    const sections = parseTabularPreview(content);
+
+    return (
+      <div className="space-y-4">
+        {sections.map((section, sectionIndex) => {
+          const maxColumns = Math.max(
+            1,
+            ...section.rows.map((row) => row.length || 1),
+          );
+
+          return (
+            <div
+              key={`${section.title}-${sectionIndex}`}
+              className={`overflow-hidden rounded-2xl border ${theme.panelBg} ${theme.panelBorder}`}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-inherit px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={`text-sm font-semibold ${theme.iconText}`}>
+                    {section.title}
+                  </span>
+                  <span className="rounded-full border border-current/20 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    {section.rows.length} {locale === "zh" ? "行" : "rows"}
+                  </span>
+                </div>
+                <span className={`text-xs ${theme.iconText} opacity-80`}>
+                  {maxColumns} {locale === "zh" ? "列" : "cols"}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="min-w-max">
+                  {section.rows.map((row, rowIndex) => (
+                    <div
+                      key={`${section.title}-${sectionIndex}-row-${rowIndex}`}
+                      className={`grid border-b border-border/60 last:border-b-0 ${
+                        rowIndex === 0
+                          ? "bg-background/80 font-semibold"
+                          : rowIndex % 2 === 0
+                            ? "bg-background/55"
+                            : "bg-background/35"
+                      }`}
+                      style={{
+                        gridTemplateColumns: `repeat(${maxColumns}, minmax(140px, 1fr))`,
+                      }}
+                    >
+                      {Array.from({ length: maxColumns }).map((_, cellIndex) => (
+                        <div
+                          key={`${section.title}-${sectionIndex}-row-${rowIndex}-cell-${cellIndex}`}
+                          className={`min-w-0 border-r border-border/60 px-4 py-3 text-sm last:border-r-0 ${
+                            rowIndex === 0 ? "text-foreground" : "text-muted-foreground"
+                          }`}
+                        >
+                          <span className="block truncate">
+                            {row[cellIndex] ?? ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <AppShell>
@@ -921,25 +1087,34 @@ export default function KnowledgePage() {
                   return (
                     <div
                       key={doc.id}
-                      className={`rounded-lg border px-3 py-2 ${theme.panelBg} ${theme.panelBorder}`}
+                      className={`rounded-2xl border px-4 py-3 shadow-sm ${theme.panelBg} ${theme.panelBorder}`}
                     >
-                      <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className={`truncate font-medium ${theme.iconText}`}>
-                          {doc.title}
-                        </span>
-                        <span className={`shrink-0 text-xs ${theme.iconText}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`truncate font-semibold ${theme.iconText}`}>
+                              {doc.title}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${getDocumentTypeBadgeClassName(doc.file_type)}`}
+                            >
+                              {getDocumentTypeLabel(doc.file_type)}
+                            </span>
+                          </div>
+                          <p className={`mt-1 text-xs ${theme.iconText} opacity-80`}>
+                            {message || t("knowledgeLoadingDocumentContent")}
+                          </p>
+                        </div>
+                        <div className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${theme.iconText} ${theme.panelBg}`}>
                           {progress?.percent ?? 0}%
-                        </span>
+                        </div>
                       </div>
-                      <div className={`mt-2 h-2 overflow-hidden rounded-full ${theme.panelBg}`}>
+                      <div className={`mt-3 h-2 overflow-hidden rounded-full bg-background/60`}>
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${theme.progressBar}`}
                           style={{ width: `${progress?.percent ?? 0}%` }}
                         />
                       </div>
-                      <p className={`mt-2 text-xs ${theme.iconText} opacity-80`}>
-                        {message || t("knowledgeLoadingDocumentContent")}
-                      </p>
                     </div>
                   );
                 })}
@@ -1008,7 +1183,7 @@ export default function KnowledgePage() {
                   return (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      className={`flex items-center justify-between p-4 transition-colors ${theme.rowClassName}`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div
@@ -1075,10 +1250,8 @@ export default function KnowledgePage() {
                             handleViewDocument(doc);
                           }}
                           disabled={!canPreview}
-                          className={`p-2 rounded-lg transition-colors ${
-                            canPreview
-                              ? "hover:bg-primary/10 hover:text-primary"
-                              : "opacity-40 cursor-not-allowed"
+                          className={`p-2 rounded-lg transition-colors ${theme.actionButtonClassName} ${
+                            canPreview ? "" : "opacity-40 cursor-not-allowed"
                           }`}
                           title={
                             canPreview
@@ -1107,10 +1280,16 @@ export default function KnowledgePage() {
           </div>
         </div>
       </main>
-<Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
+      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && closeViewModal()}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
           {viewingDoc && (
             <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+              <DialogTitle className="sr-only">
+                {t("knowledgePreviewTitle", { name: viewingDoc.title })}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                {t("knowledgePreviewDescription")}
+              </DialogDescription>
               <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-3">
                   {(() => {
@@ -1126,7 +1305,7 @@ export default function KnowledgePage() {
                   <h2 className="font-semibold">{viewingDoc.title}</h2>
                   <p className="text-xs text-muted-foreground">
                     <span
-                      className={`mr-1 inline-flex items-center rounded-full px-2 py-0.5 font-medium ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
+                      className={`mr-1 inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
                     >
                       {getDocumentTypeLabel(viewingDoc.file_type)}
                     </span>
@@ -1136,15 +1315,38 @@ export default function KnowledgePage() {
                   </p>
                 </div>
                 </div>
-                <button
-                  onClick={closeViewModal}
-                  className="p-2 hover:bg-muted rounded-lg transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
               </div>
+              {(() => {
+                const previewCopy = getFileTypePreviewCopy(viewingDoc.file_type, locale);
+                const theme = getDocumentTypeTheme(viewingDoc.file_type);
+                const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
+                return (
+                  <div className={`mx-6 mt-4 rounded-2xl border px-4 py-4 ${theme.panelBg} ${theme.panelBorder}`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.iconBg}`}>
+                        <DocumentIcon className={`h-6 w-6 ${theme.iconText}`} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}
+                          >
+                            {getDocumentTypeLabel(viewingDoc.file_type)}
+                          </span>
+                          <span className={`text-sm font-semibold ${theme.iconText}`}>
+                            {previewCopy.title}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                          {previewCopy.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
               {docInfo.total_pages && (
-                <div className="flex items-center gap-4 px-6 py-2 bg-muted/50 border-b border-border text-xs text-muted-foreground">
+                <div className="mx-6 mt-4 flex items-center gap-4 rounded-xl border border-border/70 bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <FileDigit className="h-3.5 w-3.5" />
                     {t("knowledgeTotalPages", { count: docInfo.total_pages })}
@@ -1179,22 +1381,31 @@ export default function KnowledgePage() {
               }}
             >
               {isLoadingContent ? (
-                <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/30 py-14 text-center">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {t("knowledgeLoadingDocumentContent")}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("knowledgePleaseDoNotClosePage")}
                   </p>
                 </div>
               ) : isPdfPreview ? (
-                <div className="h-full min-h-[480px] rounded-lg overflow-hidden border border-border bg-muted/30">
-                  <iframe
-                    src={`${API_BASE_URL}/api/documents/${viewingDoc.id}/file`}
-                    title={viewingDoc.title}
-                    className="w-full h-full min-h-[480px]"
-                  />
+                <div className={`h-full min-h-[480px] overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder} ${getDocumentTypeTheme(viewingDoc.file_type).panelBg}`}>
+                  {pdfPreviewUrl ? (
+                    <iframe
+                      src={pdfPreviewUrl}
+                      title={viewingDoc.title}
+                      className="w-full h-full min-h-[480px]"
+                    />
+                  ) : (
+                    <div className="flex h-full min-h-[480px] items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
               ) : isMarkdownPreview ? (
-                <div className="max-w-none">
+                <div className={`max-w-none rounded-2xl border px-5 py-5 ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -1255,26 +1466,61 @@ export default function KnowledgePage() {
                 </div>
               ) : (
                 <div className="max-w-none">
-                  <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
-                    {docContent}
-                  </pre>
-                  {docInfo.total_pages && currentPage < docInfo.total_pages && (
-                    <div className="flex flex-col items-center justify-center py-6 gap-2">
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {t("knowledgeLoadingMoreContent")}
-                          </span>
-                        </>
+                  {docContent.trim() ? (
+                    <>
+                      {isTableLikeFile(viewingDoc.file_type) ? (
+                        renderTabularPreview(docContent, viewingDoc.file_type)
                       ) : (
-                        <button
-                          onClick={() => void loadMorePages()}
-                          className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
-                        >
-                          {t("knowledgeLoadNextBatch")}
-                        </button>
+                        <div className={`overflow-hidden rounded-2xl border ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                          <div className="flex items-center justify-between border-b border-inherit px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-semibold ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
+                                {getFileTypePreviewCopy(viewingDoc.file_type, locale).title}
+                              </span>
+                              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] ${getDocumentTypeBadgeClassName(viewingDoc.file_type)}`}>
+                                {getDocumentTypeLabel(viewingDoc.file_type)}
+                              </span>
+                            </div>
+                          </div>
+                          <pre className={`whitespace-pre-wrap text-sm leading-relaxed px-4 py-4 overflow-x-auto ${[".py", ".js", ".ts", ".java", ".go", ".json", ".xml", ".yaml", ".yml", ".log", ".srt", ".vtt"].includes(viewingDoc.file_type.toLowerCase()) ? "font-mono tabular-nums" : "font-sans"}`}>
+                            {docContent}
+                          </pre>
+                        </div>
                       )}
+                      {docInfo.total_pages && currentPage < docInfo.total_pages && (
+                        <div className="flex flex-col items-center justify-center py-6 gap-2">
+                          {isLoadingMore ? (
+                            <>
+                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {t("knowledgeLoadingMoreContent")}
+                              </span>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => void loadMorePages()}
+                              className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted transition-colors"
+                            >
+                              {t("knowledgeLoadNextBatch")}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-12 text-center ${getDocumentTypeTheme(viewingDoc.file_type).panelBg} ${getDocumentTypeTheme(viewingDoc.file_type).panelBorder}`}>
+                      <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-background ${getDocumentTypeTheme(viewingDoc.file_type).iconText}`}>
+                        {(() => {
+                          const DocumentIcon = getDocumentTypeIcon(viewingDoc.file_type);
+                          return <DocumentIcon className="h-6 w-6" />;
+                        })()}
+                      </div>
+                      <h3 className="text-sm font-medium text-foreground">
+                        {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyTitle}
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {getFileTypePreviewCopy(viewingDoc.file_type, locale).emptyHint}
+                      </p>
                     </div>
                   )}
                 </div>

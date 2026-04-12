@@ -57,6 +57,8 @@ import {
     SUPPORTED_FILE_ACCEPT,
     SUPPORTED_FILE_EXTENSIONS,
     SUPPORTED_FILE_LABEL,
+    getFileTypeLabel,
+    getFileTypeTheme,
 } from "@/lib/file-types";
 import { resolveEmbeddingConfig } from "@/lib/embedding";
 import { useRequireAuth } from "@/lib/use-require-auth";
@@ -107,6 +109,7 @@ interface SessionAttachment {
     fileType: string;
     content: string;
     truncated?: boolean;
+    hasText?: boolean;
 }
 
 interface PendingKnowledgeAttachment {
@@ -124,6 +127,14 @@ interface RetrievedSource {
     score: number;
     reason: string;
     chunk_hash?: string | null;
+}
+
+interface LoadedConversationMessage {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    created_at: string;
+    retrieved_sources?: RetrievedSource[];
 }
 
 const DEFAULT_CONVERSATION_TITLES = new Set([
@@ -366,14 +377,10 @@ export default function ChatPage() {
                 const data: {
                     id: string;
                     model: string;
-                    messages: Array<{
-                        id: string;
-                        role: "user" | "assistant";
-                        content: string;
-                        created_at: string;
-                    }>;
+                    messages: LoadedConversationMessage[];
                 } = await response.json();
                 setCurrentConversationId(data.id);
+                const restoredSources: Record<string, RetrievedSource[]> = {};
                 setMessages(
                     data.messages.map((m) => ({
                         id: m.id,
@@ -382,7 +389,12 @@ export default function ChatPage() {
                         createdAt: m.created_at,
                     })),
                 );
-                setMessageSources({});
+                data.messages.forEach((message) => {
+                    if (message.role === "assistant" && message.retrieved_sources?.length) {
+                        restoredSources[message.id] = message.retrieved_sources;
+                    }
+                });
+                setMessageSources(restoredSources);
                 clearCurrentSessionAttachments();
                 // 设置当前模型。
                 const convModel = SUPPORTED_MODELS.find((m) => m.id === data.model);
@@ -517,6 +529,7 @@ export default function ChatPage() {
                 file_type: string;
                 content: string;
                 truncated?: boolean;
+                has_text?: boolean;
             } = await response.json();
 
             return {
@@ -528,6 +541,7 @@ export default function ChatPage() {
                     fileType: data.file_type,
                     content: data.content,
                     truncated: data.truncated,
+                    hasText: data.has_text,
                 } as SessionAttachment,
             };
         } catch (error) {
@@ -553,7 +567,7 @@ export default function ChatPage() {
 
         setIsUploadingFile(true);
         showStatus(
-            t("chatUploading") + ` (${validFiles.length}/${files.length})`,
+            `${t("fileStatusProcessing")} (${validFiles.length}/${files.length})`,
         );
 
         const previews: Array<{
@@ -596,7 +610,7 @@ export default function ChatPage() {
             showStatus(
                 previews.length > 1
                     ? t("chatAttachmentsAttached", { count: previews.length })
-                    : t("chatAttachmentAttached", {
+                    : t("fileStatusAttached", {
                         name: previews[0].preview.name,
                     }),
             );
@@ -637,7 +651,7 @@ export default function ChatPage() {
         formData.append("file", file);
 
         setIsUploadingFile(true);
-        showStatus(t("chatUploading"));
+        showStatus(t("fileStatusProcessing"));
 
         try {
             const params = new URLSearchParams();
@@ -672,7 +686,7 @@ export default function ChatPage() {
                 throw new Error(errorMsg);
             }
 
-            showStatus(t("chatUploadSuccess", { name: file.name }));
+            showStatus(t("fileStatusUploaded", { name: file.name }));
             if (!useRAG) {
                 setUseRAG(true);
             }
@@ -1091,6 +1105,14 @@ export default function ChatPage() {
         }
     };
 
+    const getSourceSnippet = (content: string, maxLength = 140) => {
+        const normalized = content.replace(/\s+/g, " ").trim();
+        if (normalized.length <= maxLength) {
+            return normalized;
+        }
+        return `${normalized.slice(0, maxLength).trim()}...`;
+    };
+
     const handleRegenerate = async () => {
         isRegeneratingRef.current = true;
         // 查找最后一条用户消息。
@@ -1476,11 +1498,16 @@ export default function ChatPage() {
 
                                         {message.role === "assistant" &&
                                             messageSources[message.id]?.length ? (
-                                            <div className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-3 text-left">
-                                                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                    <Link2 className="h-3.5 w-3.5" />
-                                                    {t("chatSourcesTitle")}
-                                                </div>
+                                            <details className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-3 text-left">
+                                                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                        <Link2 className="h-3.5 w-3.5" />
+                                                        {t("chatSourcesTitle")}
+                                                    </div>
+                                                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] font-medium text-gray-500">
+                                                        {messageSources[message.id].length} {t("chatSourcesExpand")}
+                                                    </span>
+                                                </summary>
                                                 <div className="mt-3 space-y-2">
                                                     {messageSources[message.id].map((source) => (
                                                         <div
@@ -1503,16 +1530,26 @@ export default function ChatPage() {
                                                                     {source.score.toFixed(2)}
                                                                 </span>
                                                             </div>
-                                                            <p className="mt-2 max-h-20 overflow-hidden whitespace-pre-wrap text-xs leading-5 text-gray-600 dark:text-gray-300">
-                                                                {source.content}
+                                                            <p className="mt-2 text-xs leading-5 text-gray-600 dark:text-gray-300">
+                                                                {getSourceSnippet(source.content)}
                                                             </p>
-                                                            <p className="mt-2 text-[11px] text-gray-400">
-                                                                {source.reason}
-                                                            </p>
+                                                            <details className="mt-2">
+                                                                <summary className="cursor-pointer text-[11px] font-medium text-primary hover:underline">
+                                                                    {locale === "zh" ? "展开查看原文" : "Expand to view details"}
+                                                                </summary>
+                                                                <div className="mt-2 space-y-2">
+                                                                    <p className="whitespace-pre-wrap text-xs leading-5 text-gray-600 dark:text-gray-300">
+                                                                        {source.content}
+                                                                    </p>
+                                                                    <p className="text-[11px] text-gray-400">
+                                                                        {source.reason}
+                                                                    </p>
+                                                                </div>
+                                                            </details>
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
+                                            </details>
                                         ) : null}
 
                                         {/* 消息操作 - 仅助手消息显示 */}
@@ -1738,33 +1775,44 @@ export default function ChatPage() {
                             />
                             {sessionAttachments.length > 0 && (
                                 <div className="flex flex-wrap gap-2 px-4 pt-4">
-                                    {sessionAttachments.map((attachment) => (
-                                        <div
-                                            key={attachment.id}
-                                            className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1 text-xs text-gray-600 dark:text-gray-300"
-                                        >
-                                            <span className="max-w-[180px] truncate">
-                                                {attachment.name}
-                                            </span>
-                                            <span className="text-gray-400 uppercase">
-                                                {attachment.fileType.replace(".", "")}
-                                            </span>
-                                            {attachment.truncated && (
-                                                <span className="text-amber-500">
-                                                    {t("chatAttachmentTruncated")}
-                                                </span>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveAttachment(attachment.id)}
-                                                className="ml-1 rounded-full p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
-                                                aria-label={t("chatAttachmentRemove")}
-                                                title={t("chatAttachmentRemove")}
+                                    {sessionAttachments.map((attachment) => {
+                                        const theme = getFileTypeTheme(attachment.fileType);
+                                        return (
+                                            <div
+                                                key={attachment.id}
+                                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-sm transition-colors ${theme.chipClassName}`}
                                             >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    ))}
+                                                <span
+                                                    className={`h-2 w-2 rounded-full bg-current ${theme.iconText}`}
+                                                />
+                                                <span className="max-w-[180px] truncate">
+                                                    {attachment.name}
+                                                </span>
+                                                <span className="uppercase opacity-80">
+                                                    {getFileTypeLabel(attachment.fileType, locale)}
+                                                </span>
+                                                {attachment.hasText === false && (
+                                                    <span className="font-medium">
+                                                        {t("fileStatusNoText")}
+                                                    </span>
+                                                )}
+                                                {attachment.truncated && (
+                                                    <span className="font-medium opacity-90">
+                                                        {t("chatAttachmentTruncated")}
+                                                    </span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveAttachment(attachment.id)}
+                                                    className="ml-1 rounded-full p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                    aria-label={t("chatAttachmentRemove")}
+                                                    title={t("chatAttachmentRemove")}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                             {/* 输入操作 - 顶部一行 */}
