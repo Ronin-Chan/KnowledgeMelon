@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useSettingsStore, SUPPORTED_MODELS } from "@/stores/settings";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useSettingsStore } from "@/stores/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +47,7 @@ import {
   Star,
 } from "lucide-react";
 import { apiFetch, API_BASE_URL } from "@/lib/api";
+import { fetchCustomModels, resolveModels } from "@/lib/custom-models";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import {
@@ -112,16 +113,23 @@ export default function MemoriesPage() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [newWhitelistItem, setNewWhitelistItem] = useState("");
   const [newBlacklistItem, setNewBlacklistItem] = useState("");
+  const [customModels, setCustomModels] = useState<
+    Awaited<ReturnType<typeof fetchCustomModels>>
+  >([]);
   const { apiKeys, openaiApiKey, model, baseUrls } = useSettingsStore();
   const t = useT();
   const locale = useLocale();
+  const localizedModels = useMemo(
+    () => resolveModels(locale, customModels),
+    [locale, customModels],
+  );
   const categoryLabels = {
     fact: t("memoriesCategoryFact"),
     preference: t("memoriesCategoryPreference"),
     goal: t("memoriesCategoryGoal"),
     important: t("memoriesCategoryImportant"),
   };
-  const currentModel = SUPPORTED_MODELS.find((m) => m.id === model);
+  const currentModel = localizedModels.find((m) => m.id === model);
   const provider = currentModel?.provider || "openai";
   const apiKey =
     apiKeys[provider] || (provider === "openai" ? openaiApiKey : "") || "";
@@ -171,6 +179,19 @@ export default function MemoriesPage() {
     fetchMemories();
     fetchSettings();
   }, [fetchMemories, fetchSettings]);
+
+  useEffect(() => {
+    const loadCustomModels = async () => {
+      try {
+        const models = await fetchCustomModels();
+        setCustomModels(models);
+      } catch (error) {
+        console.error("Failed to load custom models:", error);
+      }
+    };
+
+    void loadCustomModels();
+  }, []);
 
   const handleAddMemory = async () => {
     if (!newMemory.content.trim()) {

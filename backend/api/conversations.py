@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.auth import get_current_user
 from core.database import get_session
 from models.entities import Conversation, InteractionMetric, Message, User
+from core.constants import DEFAULT_MODEL_ID
 from services.conversation_service import conversation_service
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 class ConversationCreate(BaseModel):
     title: Optional[str] = None
-    model: str = "gpt-5.1-mini"
+    model: str = DEFAULT_MODEL_ID
 
 
 class ConversationUpdate(BaseModel):

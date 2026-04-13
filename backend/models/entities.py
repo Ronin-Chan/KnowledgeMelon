@@ -6,6 +6,8 @@ from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Tex
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, relationship
 
+from core.constants import DEFAULT_MODEL_ID
+
 Base = declarative_base()
 
 
@@ -23,6 +25,7 @@ class User(Base):
     memories = relationship("Memory", back_populates="user")
     memory_settings = relationship("MemorySetting", back_populates="user")
     api_keys = relationship("UserApiKey", back_populates="user", cascade="all, delete-orphan")
+    custom_models = relationship("CustomModel", back_populates="user", cascade="all, delete-orphan")
     interaction_metrics = relationship("InteractionMetric", back_populates="user")
 
 
@@ -39,6 +42,27 @@ class UserApiKey(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="api_keys")
+
+
+class CustomModel(Base):
+    __tablename__ = "custom_models"
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider", "model_id", name="uq_custom_models_user_provider_model"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    model_id = Column(String(100), nullable=False)
+    display_name = Column(String(255), nullable=True)
+    provider = Column(String(50), nullable=False)
+    base_url = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
+    context_window = Column(Integer, nullable=True)
+    pinned = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="custom_models")
 
 
 class Document(Base):
@@ -82,7 +106,7 @@ class Conversation(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     title = Column(String(255))
-    model = Column(String(100), default="gpt-5.1-mini")
+    model = Column(String(100), default=DEFAULT_MODEL_ID)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     message_count = Column(Integer, default=0)

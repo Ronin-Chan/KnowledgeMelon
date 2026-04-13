@@ -208,7 +208,7 @@ function QualityMeterCard({
   value,
   accent,
   note,
-  inverse = false,
+  tone = "positive",
   labels,
   directionLabel,
 }: {
@@ -216,7 +216,7 @@ function QualityMeterCard({
   value: number;
   accent: string;
   note: string;
-  inverse?: boolean;
+  tone?: "positive" | "risk";
   labels: {
     low: string;
     mid: string;
@@ -227,32 +227,27 @@ function QualityMeterCard({
   const normalized = Math.max(0, Math.min(1, value));
   const totalBars = 12;
   const filled = Math.round(normalized * totalBars);
-  const statusClass = inverse
-    ? normalized < 0.2
+  const toneClass =
+    tone === "positive"
       ? "text-emerald-600 dark:text-emerald-300"
-      : normalized < 0.5
-        ? "text-amber-600 dark:text-amber-300"
-        : "text-red-600 dark:text-red-300"
-    : normalized >= 0.8
-      ? "text-emerald-600 dark:text-emerald-300"
-      : normalized >= 0.5
-        ? "text-amber-600 dark:text-amber-300"
-        : "text-red-600 dark:text-red-300";
+      : "text-red-600 dark:text-red-300";
 
   return (
     <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-foreground">{title}</p>
-          <p
-            className={`mt-1 text-3xl font-semibold tracking-tight ${statusClass}`}
-          >
+          <p className={`mt-1 text-3xl font-semibold tracking-tight ${toneClass}`}>
             {formatPercent(normalized)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{note}</p>
         </div>
         <div
-          className={`rounded-2xl px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${inverse ? "bg-muted/60 text-muted-foreground" : "bg-primary/10 text-primary"}`}
+          className={`rounded-2xl px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+            tone === "positive"
+              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "bg-red-500/10 text-red-700 dark:text-red-300"
+          }`}
         >
           {directionLabel}
         </div>
@@ -263,13 +258,7 @@ function QualityMeterCard({
             const active = index < filled;
             const fillOpacity =
               0.25 + (index / Math.max(totalBars - 1, 1)) * 0.75;
-            const segmentClass = inverse
-              ? active
-                ? accent
-                : "bg-red-200/50 dark:bg-red-950/30"
-              : active
-                ? accent
-                : "bg-muted-foreground/20";
+            const segmentClass = active ? accent : "bg-muted-foreground/20";
             return (
               <span
                 key={index}
@@ -367,23 +356,23 @@ export default function InsightsPage() {
               value: summary.quality.answer_success_rate,
               accent: "bg-emerald-500",
               note: t("insightsHigherBetter"),
-              inverse: false,
+              tone: "positive",
             },
             {
               key: "one_shot_rate",
               title: t("insightsOneShotRate"),
               value: summary.quality.one_shot_rate,
-              accent: "bg-blue-500",
+              accent: "bg-emerald-500",
               note: t("insightsHigherBetter"),
-              inverse: false,
+              tone: "positive",
             },
             {
               key: "follow_up_rate",
               title: t("insightsFollowUpRate"),
               value: summary.quality.follow_up_rate,
-              accent: "bg-amber-500",
+              accent: "bg-red-500",
               note: t("insightsLowerBetter"),
-              inverse: true,
+              tone: "risk",
             },
             {
               key: "hallucination_rate",
@@ -391,15 +380,15 @@ export default function InsightsPage() {
               value: summary.quality.hallucination_rate,
               accent: "bg-red-500",
               note: t("insightsLowerBetter"),
-              inverse: true,
+              tone: "risk",
             },
             {
               key: "human_correction_rate",
               title: t("insightsHumanCorrectionRate"),
               value: summary.quality.human_correction_rate,
-              accent: "bg-slate-500",
+              accent: "bg-red-500",
               note: t("insightsLowerBetter"),
-              inverse: true,
+              tone: "risk",
             },
           ]
         : [],
@@ -601,7 +590,7 @@ export default function InsightsPage() {
                         value={card.value}
                         accent={card.accent}
                         note={card.note}
-                        inverse={card.inverse}
+                        tone={card.tone}
                         labels={{
                           low: t("insightsDistributionLow"),
                           mid: t("insightsDistributionMid"),

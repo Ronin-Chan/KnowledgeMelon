@@ -1,11 +1,9 @@
 ﻿"use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   useSettingsStore,
-  SUPPORTED_MODELS,
   PROVIDERS,
-  getLocalizedModels,
 } from "@/stores/settings";
 import { Message } from "@/types";
 import { v4 as uuidv4 } from "uuid";
@@ -30,7 +28,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -53,6 +53,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { apiFetch, API_BASE_URL } from "@/lib/api";
+import { fetchCustomModels, resolveModels } from "@/lib/custom-models";
 import {
   SUPPORTED_FILE_ACCEPT,
   SUPPORTED_FILE_EXTENSIONS,
@@ -66,6 +67,7 @@ import Link from "next/link";
 import { useLocale, useT } from "@/lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { markdownComponents } from "@/components/markdown-components";
 
 type SpeechRecognitionResultLike = {
   transcript: string;
@@ -189,7 +191,9 @@ export default function ChatPage() {
   const { shouldBlock } = useRequireAuth();
   const t = useT();
   const locale = useLocale();
-  const localizedModels = getLocalizedModels(locale);
+  const [customModels, setCustomModels] = useState<
+    Awaited<ReturnType<typeof fetchCustomModels>>
+  >([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -249,6 +253,21 @@ export default function ChatPage() {
     responseLength,
     setResponseLength,
   } = useSettingsStore();
+  const localizedModels = useMemo(
+    () => resolveModels(locale, customModels),
+    [locale, customModels],
+  );
+  const builtinModels = useMemo(
+    () => localizedModels.filter((modelItem) => !modelItem.isCustom),
+    [localizedModels],
+  );
+  const groupedCustomModels = useMemo(
+    () =>
+      localizedModels.filter(
+        (modelItem) => modelItem.isCustom,
+      ),
+    [localizedModels],
+  );
   const apiKey = getEffectiveApiKey();
   const currentModel = localizedModels.find((m) => m.id === model);
   const modelProvider = currentModel?.provider || "openai";
@@ -262,6 +281,25 @@ export default function ChatPage() {
   const currentProvider = PROVIDERS.find(
     (p) => p.id === currentModel?.provider,
   );
+
+  useEffect(() => {
+    const loadCustomModels = async () => {
+      try {
+        const models = await fetchCustomModels();
+        setCustomModels(models);
+      } catch (error) {
+        console.error("Failed to load custom models:", error);
+      }
+    };
+
+    void loadCustomModels();
+  }, []);
+
+  useEffect(() => {
+    if (currentModel) {
+      setSelectedProvider(currentModel.provider);
+    }
+  }, [currentModel, setSelectedProvider]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -416,7 +454,7 @@ export default function ChatPage() {
         setMessageSources(restoredSources);
         clearCurrentSessionAttachments();
         // 设置当前模型。
-        const convModel = SUPPORTED_MODELS.find((m) => m.id === data.model);
+        const convModel = localizedModels.find((m) => m.id === data.model);
         if (convModel) {
           setModel(data.model);
           setSelectedProvider(convModel.provider);
@@ -1400,7 +1438,7 @@ export default function ChatPage() {
               <Select
                 value={model}
                 onValueChange={(value) => {
-                  const m = SUPPORTED_MODELS.find((mod) => mod.id === value);
+                  const m = localizedModels.find((mod) => mod.id === value);
                   if (m) {
                     setModel(m.id);
                     setSelectedProvider(m.provider);
@@ -1426,23 +1464,55 @@ export default function ChatPage() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-125 w-90">
-                  {localizedModels.map((m) => (
-                    <SelectItem
-                      key={m.id}
-                      value={m.id}
-                      className="h-auto whitespace-normal py-3"
-                    >
-                      <div className="flex w-full max-w-90 flex-col items-start gap-1">
-                        <span className="w-full truncate text-sm font-medium">
-                          {m.name}
-                        </span>
-                        <span className="wrap-break-word w-full text-xs leading-relaxed text-muted-foreground">
-                          {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
-                          {m.description}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>{locale === "zh" ? "内置模型" : "Built-in models"}</SelectLabel>
+                    {builtinModels.map((m) => (
+                      <SelectItem
+                        key={m.id}
+                        value={m.id}
+                        className="h-auto whitespace-normal py-3"
+                      >
+                        <div className="flex w-full max-w-90 flex-col items-start gap-1">
+                          <span className="w-full truncate text-sm font-medium">
+                            {m.name}
+                          </span>
+                          <span className="wrap-break-word w-full text-xs leading-relaxed text-muted-foreground">
+                            {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
+                            {m.description}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                  {groupedCustomModels.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>
+                        {locale === "zh" ? "自定义模型" : "Custom models"}
+                      </SelectLabel>
+                      {groupedCustomModels.map((m) => (
+                        <SelectItem
+                          key={`${m.customId ?? m.id}`}
+                          value={m.id}
+                          className="h-auto whitespace-normal py-3"
+                        >
+                          <div className="flex w-full max-w-90 flex-col items-start gap-1">
+                            <span className="flex w-full items-center gap-2 truncate text-sm font-medium">
+                              {m.name}
+                              {m.pinned && (
+                                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
+                                  {locale === "zh" ? "置顶" : "Pinned"}
+                                </span>
+                              )}
+                            </span>
+                            <span className="wrap-break-word w-full text-xs leading-relaxed text-muted-foreground">
+                              {PROVIDERS.find((p) => p.id === m.provider)?.name} ·{" "}
+                              {m.description || m.id}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1557,7 +1627,10 @@ export default function ChatPage() {
                           </div>
                         ) : message.role === "assistant" ? (
                           <div className="prose prose-sm max-w-none break-words leading-relaxed text-sm dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-code:break-words prose-pre:my-1.5 prose-pre:overflow-x-auto">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={markdownComponents}
+                            >
                               {message.content}
                             </ReactMarkdown>
                           </div>

@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { useSettingsStore, SUPPORTED_MODELS } from "@/stores/settings";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useSettingsStore } from "@/stores/settings";
 import { Button } from "@/components/ui/button";
 import {
   Upload,
@@ -20,6 +20,7 @@ import {
   Download,
 } from "lucide-react";
 import { apiFetch, API_BASE_URL } from "@/lib/api";
+import { fetchCustomModels, resolveModels } from "@/lib/custom-models";
 import {
   SUPPORTED_FILE_ACCEPT,
   SUPPORTED_FILE_EXTENSIONS,
@@ -40,6 +41,7 @@ import {
 import { useT } from "@/lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { markdownComponents } from "@/components/markdown-components";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +95,9 @@ export default function KnowledgePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [customModels, setCustomModels] = useState<
+    Awaited<ReturnType<typeof fetchCustomModels>>
+  >([]);
   const [selfOllamaServiceReady, setSelfOllamaServiceReady] =
     useState<boolean>(false);
   const [selfOllamaModelReady, setSelfOllamaModelReady] =
@@ -133,8 +138,12 @@ export default function KnowledgePage() {
   useEffect(() => {
     tRef.current = t;
   }, [t]);
+  const localizedModels = useMemo(
+    () => resolveModels(locale, customModels),
+    [locale, customModels],
+  );
   const provider =
-    SUPPORTED_MODELS.find((m) => m.id === model)?.provider || "openai";
+    localizedModels.find((m) => m.id === model)?.provider || "openai";
   const isPdfPreview = viewingDoc?.file_type === ".pdf";
   const isMarkdownPreview = viewingDoc?.file_type === ".md";
   const embeddingConfig = resolveEmbeddingConfig({
@@ -170,6 +179,19 @@ export default function KnowledgePage() {
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
+
+  useEffect(() => {
+    const loadCustomModels = async () => {
+      try {
+        const models = await fetchCustomModels();
+        setCustomModels(models);
+      } catch (error) {
+        console.error("Failed to load custom models:", error);
+      }
+    };
+
+    void loadCustomModels();
+  }, []);
 
   useEffect(() => {
     const refreshDocuments = () => {
@@ -1476,16 +1498,7 @@ export default function KnowledgePage() {
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        a: ({ href, children }) => (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary underline underline-offset-2"
-                          >
-                            {children}
-                          </a>
-                        ),
+                        ...markdownComponents,
                         code: ({ className, children, ...props }) => {
                           const isInline = !className?.includes("language-");
                           return isInline ? (

@@ -25,11 +25,11 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     zh: "更高精度版本，适合高难度推理与代码任务",
     en: "Higher-precision version for demanding reasoning and coding",
   },
-  gpt_5_mini: {
+  gpt_5_4_mini: {
     zh: "高性价比默认选择，速度和质量更均衡",
     en: "A balanced default choice with strong speed-to-quality ratio",
   },
-  gpt_5_nano: {
+  gpt_5_4_nano: {
     zh: "低延迟、低成本，适合高吞吐轻量任务",
     en: "Low-latency, low-cost option for high-throughput lightweight tasks",
   },
@@ -157,17 +157,17 @@ const MODEL_DESCRIPTIONS: Record<string, Record<Locale, string>> = {
     contextWindow: 272000,
   },
   {
-    id: "gpt-5-mini",
-    name: "GPT-5 Mini",
+    id: "gpt-5.4-mini",
+    name: "GPT-5.4 Mini",
     provider: "openai",
-    descriptionKey: "gpt_5_mini",
+    descriptionKey: "gpt_5_4_mini",
     contextWindow: 400000,
   },
   {
-    id: "gpt-5-nano",
-    name: "GPT-5 Nano",
+    id: "gpt-5.4-nano",
+    name: "GPT-5.4 Nano",
     provider: "openai",
-    descriptionKey: "gpt_5_nano",
+    descriptionKey: "gpt_5_4_nano",
     contextWindow: 400000,
   },
   {
@@ -436,6 +436,8 @@ interface ApiKeys {
   [provider: string]: string;
 }
 
+const DEFAULT_MODEL_ID = "gpt-5.4";
+
 interface SettingsStore {
   openaiApiKey: string;
   model: string;
@@ -477,8 +479,8 @@ export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set, get) => ({
       openaiApiKey: "",
-      model: "gpt-5-mini",
-      theme: "dark",
+      model: DEFAULT_MODEL_ID,
+      theme: "light",
       locale: "en",
       responseLength: "balanced",
       apiKeys: {},
@@ -542,6 +544,21 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: "settings-storage",
+      version: 1,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<SettingsStore> & {
+          model?: string;
+        };
+
+        if (
+          !state.model ||
+          !SUPPORTED_MODELS.some((model) => model.id === state.model)
+        ) {
+          state.model = DEFAULT_MODEL_ID;
+        }
+
+        return state as SettingsStore;
+      },
     },
   ),
 );
