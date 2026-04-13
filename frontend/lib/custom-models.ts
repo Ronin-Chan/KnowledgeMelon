@@ -29,7 +29,9 @@ export interface CustomModelPayload {
   pinned?: boolean;
 }
 
-export interface ResolvedModelConfig extends LocalizedModelConfig {
+export interface ResolvedModelConfig
+  extends Omit<LocalizedModelConfig, "descriptionKey"> {
+  descriptionKey?: string;
   isCustom?: boolean;
   pinned?: boolean;
   customId?: string;
@@ -52,7 +54,7 @@ export const resolveModels = (
   locale: Locale,
   customModels: CustomModelRecord[],
 ): ResolvedModelConfig[] => {
-  const builtinModels = getLocalizedModels(locale).map((model) => ({
+  const builtinModels: ResolvedModelConfig[] = getLocalizedModels(locale).map((model) => ({
     ...model,
     isCustom: false,
     pinned: false,
@@ -60,7 +62,7 @@ export const resolveModels = (
     baseUrl: null,
   }));
 
-  const customEntries = customModels.map((model) => ({
+  const customEntries: ResolvedModelConfig[] = customModels.map((model) => ({
     id: model.model_id,
     name: getCustomModelDisplayName(model),
     provider: model.provider,
