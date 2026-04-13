@@ -137,6 +137,21 @@
 }
 
 ::selection {
-  background: hsl(var(--primary) / 0.12);
-  color: hsl(var(--foreground));
+  background: #87cefa;
+  color: hsl(0 0% 8%);
+}
+
+::-moz-selection {
+  background: #87cefa;
+  color: hsl(0 0% 8%);
+}
+
+.dark ::selection {
+  background: #ffc0cb;
+  color: hsl(0 0% 8%);
+}
+
+.dark ::-moz-selection {
+  background: #ffc0cb;
+  color: hsl(0 0% 8%);
 }

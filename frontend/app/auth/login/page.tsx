@@ -96,21 +96,21 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={toggleLocale}
-        className="absolute right-4 top-4 z-20 rounded-full bg-background px-3 py-2 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
+        className="absolute right-4 top-4 z-20 rounded-full bg-background px-3 py-2 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
       >
         {locale === "zh" ? "English" : "中文"}
       </button>
 
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl items-center justify-center sm:min-h-[calc(100vh-5rem)]">
-        <Card className="grid w-full max-w-4xl overflow-hidden bg-card md:grid-cols-[1.05fr_0.95fr]">
-          <div className="bg-foreground px-6 py-8 text-background sm:px-8 sm:py-10 md:px-10 md:py-12">
-            <div className="text-sm uppercase tracking-[0.3em] text-background/70">
+        <Card className="grid w-full max-w-4xl overflow-hidden border border-border/70 bg-card shadow-[0_24px_60px_-32px_rgba(15,23,42,0.42)] md:grid-cols-[1.05fr_0.95fr]">
+          <div className="bg-slate-950 px-6 py-8 text-slate-50 dark:bg-slate-950 dark:text-slate-50 sm:px-8 sm:py-10 md:px-10 md:py-12">
+            <div className="text-sm uppercase tracking-[0.3em] text-slate-50/70">
               Knowledge Melon
             </div>
             <h1 className="mt-6 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
               {locale === "zh" ? "欢迎回来" : "Welcome back"}
             </h1>
-            <p className="mt-4 max-w-md text-sm leading-7 text-background/75">
+            <p className="mt-4 max-w-md text-sm leading-7 text-slate-50/75">
               {locale === "zh"
                 ? "登录后可访问你的对话、知识库、记忆，以及可选的加密服务器端 API Key 同步。"
                 : "Log in to access your conversations, knowledge base, memories, and optional encrypted server-side API key sync."}
@@ -156,7 +156,11 @@ export default function LoginPage() {
                   {error}
                 </div>
               )}
-              <Button className="w-full" disabled={isLoading} type="submit">
+              <Button
+                className="w-full bg-slate-950 text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:bg-slate-800 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+                disabled={isLoading}
+                type="submit"
+              >
                 {isLoading
                   ? locale === "zh"
                     ? "登录中..."

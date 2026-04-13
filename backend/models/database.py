@@ -5,6 +5,8 @@ from pgvector.sqlalchemy import Vector
 from datetime import datetime
 import uuid
 
+from core.constants import DEFAULT_MODEL_ID
+
 Base = declarative_base()
 
 class Document(Base):
@@ -35,7 +37,7 @@ class Conversation(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(255))
-    model = Column(String(100), default="gpt-5.1-mini")  # 使用的模型
+    model = Column(String(100), default=DEFAULT_MODEL_ID)  # 使用的模型
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     message_count = Column(Integer, default=0)  # 消息数量统计

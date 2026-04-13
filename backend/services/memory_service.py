@@ -6,6 +6,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.constants import DEFAULT_MODEL_ID
 from models.entities import Memory
 from services.embedding_service import embedding_service
 
@@ -140,7 +141,7 @@ class MemoryService:
         if not settings.get("auto_extract", True):
             return []
 
-        llm = ChatOpenAI(api_key=api_key, model="gpt-5.1-mini", temperature=0.3)
+        llm = ChatOpenAI(api_key=api_key, model=DEFAULT_MODEL_ID)
         messages = [
             SystemMessage(
                 content=(

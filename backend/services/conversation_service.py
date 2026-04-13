@@ -7,6 +7,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.entities import Conversation, Message
+from core.constants import DEFAULT_MODEL_ID
 from services.llm_service import llm_service
 
 MAX_CONTEXT_TOKENS = 120000
@@ -14,7 +15,7 @@ MAX_MESSAGES_BEFORE_SUMMARY = 20
 SUMMARY_TRIGGER_THRESHOLD = 100000
 
 
-def count_tokens(text: str, model: str = "gpt-5.1-mini") -> int:
+def count_tokens(text: str, model: str = DEFAULT_MODEL_ID) -> int:
     try:
         encoding = tiktoken.encoding_for_model(model)
         return len(encoding.encode(text))
@@ -28,7 +29,7 @@ class ConversationService:
         session: AsyncSession,
         user_id,
         title: Optional[str] = None,
-        model: str = "gpt-5.1-mini",
+        model: str = DEFAULT_MODEL_ID,
     ) -> Conversation:
         conversation = Conversation(
             id=uuid.uuid4(),
@@ -100,7 +101,7 @@ class ConversationService:
         user_id,
         role: str,
         content: str,
-        model: str = "gpt-5.1-mini",
+        model: str = DEFAULT_MODEL_ID,
     ) -> Message:
         tokens = count_tokens(content, model)
         message = Message(
@@ -146,7 +147,7 @@ class ConversationService:
         async for chunk in llm_service.stream_chat(
             message=summary_prompt,
             api_key=api_key,
-            model="gpt-5.1-mini",
+            model=DEFAULT_MODEL_ID,
             use_rag=False,
             use_memory=False,
         ):
@@ -167,7 +168,7 @@ class ConversationService:
         session: AsyncSession,
         conversation_id: str,
         user_id,
-        current_model: str = "gpt-5.1-mini",
+        current_model: str = DEFAULT_MODEL_ID,
         max_tokens: int = MAX_CONTEXT_TOKENS,
     ) -> List[Dict[str, str]]:
         conversation = await self.get_conversation(session, conversation_id, user_id)

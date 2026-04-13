@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
+
+from core.constants import DEFAULT_MODEL_ID
 
 
 class ChatMessage(BaseModel):
@@ -22,7 +24,7 @@ class ChatRequest(BaseModel):
     use_tools: bool = False
     attachments: Optional[List[AttachmentInput]] = None
     apiKey: str
-    model: str = "gpt-5.1-mini"
+    model: str = DEFAULT_MODEL_ID
     baseUrl: Optional[str] = None
     response_length: str = "balanced"
     is_regeneration: bool = False
@@ -37,7 +39,7 @@ class RAGChatRequest(BaseModel):
     attachments: Optional[List[AttachmentInput]] = None
     conversationId: Optional[str] = None
     apiKey: str
-    model: str = "gpt-5.1-mini"
+    model: str = DEFAULT_MODEL_ID
     baseUrl: Optional[str] = None
     response_length: str = "balanced"
     is_regeneration: bool = False
@@ -175,3 +177,37 @@ class StoredApiKeyResponse(BaseModel):
     provider: str
     api_key: str
     base_url: str
+
+
+class CustomModelBase(BaseModel):
+    model_id: str = Field(min_length=1, max_length=100)
+    display_name: Optional[str] = Field(default=None, max_length=255)
+    provider: Literal[
+        "openai",
+        "anthropic",
+        "google",
+        "deepseek",
+        "alibaba",
+        "zhipu",
+        "moonshot",
+        "cohere",
+        "mistral",
+    ]
+    base_url: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    context_window: Optional[int] = Field(default=None, ge=1)
+    pinned: bool = False
+
+
+class CustomModelCreate(CustomModelBase):
+    pass
+
+
+class CustomModelUpdate(CustomModelBase):
+    pass
+
+
+class CustomModelResponse(CustomModelBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime

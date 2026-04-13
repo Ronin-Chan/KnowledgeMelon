@@ -134,6 +134,7 @@ async def chat(
         )
 
     async def generate():
+        nonlocal assistant_message_id
         assistant_content = ""
         try:
             async for chunk in llm_service.stream_chat(
@@ -261,6 +262,7 @@ async def chat_with_rag(
         )
 
     async def generate():
+        nonlocal assistant_message_id
         assistant_content = ""
         try:
             async for chunk in llm_service.stream_chat(

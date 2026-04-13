@@ -76,21 +76,21 @@ export default function RegisterPage() {
       <button
         type="button"
         onClick={toggleLocale}
-        className="absolute right-4 top-4 z-20 rounded-full bg-background px-3 py-2 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
+        className="absolute right-4 top-4 z-20 rounded-full bg-background px-3 py-2 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
       >
         {locale === "zh" ? "English" : "中文"}
       </button>
 
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl items-center justify-center sm:min-h-[calc(100vh-5rem)]">
-        <Card className="grid w-full max-w-4xl overflow-hidden bg-card md:grid-cols-[1fr_1.05fr]">
-          <div className="bg-foreground px-6 py-8 text-background sm:px-8 sm:py-10 md:px-10 md:py-12">
-            <div className="text-sm uppercase tracking-[0.3em] text-background/70">
+        <Card className="grid w-full max-w-4xl overflow-hidden border border-border/70 bg-card shadow-[0_24px_60px_-32px_rgba(15,23,42,0.42)] md:grid-cols-[1fr_1.05fr]">
+          <div className="bg-slate-950 px-6 py-8 text-slate-50 dark:bg-slate-950 dark:text-slate-50 sm:px-8 sm:py-10 md:px-10 md:py-12">
+            <div className="text-sm uppercase tracking-[0.3em] text-slate-50/70">
               {locale === "zh" ? "个人工作区" : "Personal Workspace"}
             </div>
             <h1 className="mt-6 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
               {locale === "zh" ? "创建你的账户" : "Create your account"}
             </h1>
-            <p className="mt-4 max-w-md text-sm leading-7 text-background/75">
+            <p className="mt-4 max-w-md text-sm leading-7 text-slate-50/75">
               {locale === "zh"
                 ? "每个账户都有独立的对话、知识库和记忆。API Key 默认保存在本地，如你选择，也可以同步到服务器。"
                 : "Each account gets its own isolated conversations, knowledge base, and memories. API keys stay local by default and can be synced to the server only if you choose."}
@@ -150,7 +150,11 @@ export default function RegisterPage() {
                   {error}
                 </div>
               )}
-              <Button className="w-full" disabled={isLoading} type="submit">
+              <Button
+                className="w-full bg-slate-950 text-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:bg-slate-800 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+                disabled={isLoading}
+                type="submit"
+              >
                 {isLoading
                   ? locale === "zh"
                     ? "创建账户中..."

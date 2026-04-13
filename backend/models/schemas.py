@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+from core.constants import DEFAULT_MODEL_ID
+
 
 class ChatMessage(BaseModel):
     role: str  # "user" 或 "assistant"
@@ -21,7 +23,7 @@ class ChatRequest(BaseModel):
     use_tools: bool = False
     attachments: Optional[List[AttachmentInput]] = None
     apiKey: str
-    model: str = "gpt-5.1-mini"
+    model: str = DEFAULT_MODEL_ID
     baseUrl: Optional[str] = None
     response_length: str = "balanced"
 
@@ -55,7 +57,7 @@ class RAGChatRequest(BaseModel):
     attachments: Optional[List[AttachmentInput]] = None
     conversationId: Optional[str] = None
     apiKey: str
-    model: str = "gpt-5.1-mini"
+    model: str = DEFAULT_MODEL_ID
     baseUrl: Optional[str] = None
     response_length: str = "balanced"
 

@@ -7,6 +7,7 @@ from pydantic import SecretStr
 from services.rag_service import rag_service
 from services.memory_service import memory_service
 from services.tools_service import tools_service
+import re
 
 litellm = import_module("litellm")
 acompletion = getattr(litellm, "acompletion")
@@ -33,6 +34,15 @@ def _to_text(value: Any) -> str:
 
 class LLMService:
     WEB_SEARCH_TOOL_NAME = "web_search"
+    WEB_SEARCH_INTENT_PATTERNS = (
+        # English
+        r"(\bnews\b|\bheadline(s)?\b|\btop stories\b|\bbreaking\b|\blatest\b|\bnew(est)?\b|\btoday\b|\bcurrent\b|\bcurrent events\b|\brecent\b|\brealtime\b|\blive\b|\bupdate(d)?\b|\bversion\b|\brelease\b|\btrend(ing)?\b|\btrending\b|\bsearch\b|\blook up\b|\bcheck\b)",
+        r"(\bweather\b|\bforecast\b|\btemperature\b|\btemperature now\b|\bprice\b|\bprices\b|\bstock(s)?\b|\bshare(s)?\b|\bmarket\b|\bexchange rate(s)?\b|\bcurrency\b|\bflight(s)?\b|\btrain(s)?\b|\bschedule(s)?\b|\btraffic\b|\btraffic conditions\b|\bscore(s)?\b|\bgame(s)?\b|\bmatch(es)?\b|\bevent(s)?\b|\bpolicy\b|\blaw(s)?\b|\bregulation(s)?\b|\bannouncement(s)?\b|\bearnings\b|\bresults\b)",
+        # Chinese
+        r"(今日|今天|最新|最新的|最新消息|新闻|头条|热点|热搜|热榜|实时|实时新闻|现状|现在|当前|近期|最近|刚刚|联网|上网|搜索|查一下|帮我查|帮我找|查找|找一下|看看|看看有没有|有没有|最新版本|版本更新|更新|发布|发布会|公告|通知|政策|法规|法律|汇率|价格|股价|行情|天气|预报|温度|机票|航班|火车|高铁|酒店|路况|交通|赛程|比赛结果|比分|比赛|比赛安排|开盘|收盘|财报|销量|上市)",
+        r"(国际新闻|国内新闻|中国新闻|美国新闻|社会新闻|科技新闻|财经新闻|娱乐新闻|体育新闻|世界新闻|全球新闻|地方新闻)",
+        r"(历史上今天|今天发生了什么|今天的新闻|今日新闻|今日热点|今日头条|今日热搜|本周热点|本月热点|最近新闻|最新动态|最新进展|最新情况)",
+    )
 
     def _normalize_response_length(self, response_length: Optional[str]) -> str:
         value = (response_length or "balanced").strip().lower()
@@ -45,7 +55,6 @@ class LLMService:
         controls = {
             "concise": {
                 "max_tokens": 500,
-                "temperature": 0.35,
                 "style_prompt": (
                     "Keep the answer concise and focused. "
                     "Use short paragraphs or bullets, but avoid fragmented one-line replies. "
@@ -54,7 +63,6 @@ class LLMService:
             },
             "balanced": {
                 "max_tokens": 900,
-                "temperature": 0.45,
                 "style_prompt": (
                     "Keep the answer moderately detailed. "
                     "Use normal paragraphs, and only use bullets when they genuinely improve clarity. "
@@ -63,7 +71,6 @@ class LLMService:
             },
             "detailed": {
                 "max_tokens": 1500,
-                "temperature": 0.55,
                 "style_prompt": (
                     "Give a detailed answer with clear structure, examples, and explanations when helpful. "
                     "Still avoid choppy sentence fragments."
@@ -164,6 +171,79 @@ class LLMService:
             return []
         return [web_search_tool.to_dict()]
 
+    def _has_web_search_intent(self, message: str) -> bool:
+        text = (message or "").strip().lower()
+        if not text:
+            return False
+        return any(re.search(pattern, text, re.IGNORECASE) for pattern in self.WEB_SEARCH_INTENT_PATTERNS)
+
+    def _build_web_search_query(self, message: str) -> str:
+        # 默认直接用用户原话作为搜索词，尽量保留用户想查的主题范围。
+        # 对于“给我五条中国今日热点新闻”这类请求，原话本身就是可用的查询。
+        query = (message or "").strip()
+        return query[:200]
+
+    def _format_web_search_context(self, search_result: Any) -> str:
+        if not search_result:
+            return ""
+
+        payload: Dict[str, Any]
+        if isinstance(search_result, str):
+            try:
+                payload = json.loads(search_result)
+            except Exception:
+                return ""
+        elif isinstance(search_result, dict):
+            payload = search_result
+        else:
+            return ""
+
+        results = payload.get("results") or []
+        if not isinstance(results, list) or not results:
+            return ""
+
+        lines = [
+            "Live web search results (temporary context).",
+            "Use these results as the current information source and do not ask whether the user wants web search.",
+            f"Search query: {payload.get('query', '')}",
+        ]
+
+        for index, item in enumerate(results[:5], start=1):
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "").strip()
+            snippet = str(item.get("snippet") or "").strip()
+            url = str(item.get("url") or "").strip()
+            if not title and not snippet and not url:
+                continue
+            lines.append(
+                f"{index}. Title: {title or 'N/A'}\n"
+                f"   Summary: {snippet or 'N/A'}\n"
+                f"   Source: {url or 'N/A'}"
+            )
+
+        if len(lines) <= 3:
+            return ""
+
+        return "\n".join(lines)
+
+    async def _build_live_web_context(self, message: str) -> str:
+        if not self._has_web_search_intent(message):
+            return ""
+
+        query = self._build_web_search_query(message)
+        if not query:
+            return ""
+
+        tool_result = await tools_service.execute_tool(
+            self.WEB_SEARCH_TOOL_NAME,
+            {
+                "query": query,
+                "num_results": 5,
+            },
+        )
+        return self._format_web_search_context(tool_result)
+
     def _format_attachments_context(
         self,
         attachments: Optional[List[Any]],
@@ -222,7 +302,9 @@ class LLMService:
         user_id: Optional[str],
         use_rag: bool,
         use_memory: bool,
+        use_tools: bool,
         response_length: Optional[str],
+        live_web_context: str = "",
         attachments: Optional[List[Any]] = None,
     ) -> List[Dict[str, Any]]:
         # 这里是整个 AI 请求链路最关键的地方：
@@ -234,6 +316,17 @@ class LLMService:
             "You are a helpful assistant. Answer clearly and accurately."
         ]
         prompt_sections.append(self._response_controls(response_length)["style_prompt"])
+        if use_tools:
+            prompt_sections.append(
+                "Web search mode is enabled. For questions that need current or external information, "
+                "do not ask the user whether to browse. Use the live web search context if present, "
+                "or call web_search with the best available query."
+            )
+        if live_web_context.strip():
+            prompt_sections.append(
+                "When answering, rely on the live web search context below for current information.\n"
+                + live_web_context.strip()
+            )
 
         if use_rag and session and api_key and user_id:
             # RAG：从知识库里取和当前问题最相关的文档片段。
@@ -298,6 +391,10 @@ class LLMService:
     ) -> AsyncIterable[str]:
         # 先把最终上下文拼好，再交给模型。
         # 这样上层只需要控制“开没开 RAG / Memory / Tools”，不用关心 prompt 细节。
+        live_web_context = ""
+        if use_tools:
+            live_web_context = await self._build_live_web_context(message)
+
         messages = await self._build_messages(
             message=message,
             history=history,
@@ -308,7 +405,9 @@ class LLMService:
             user_id=user_id,
             use_rag=use_rag,
             use_memory=use_memory,
+            use_tools=use_tools,
             response_length=response_length,
+            live_web_context=live_web_context,
             attachments=attachments,
         )
 
@@ -319,10 +418,9 @@ class LLMService:
             "api_key": api_key,
             "base_url": base_url,
             "max_tokens": response_controls["max_tokens"],
-            "temperature": response_controls["temperature"],
         }
 
-        if use_tools:
+        if use_tools and not live_web_context:
             # 工具模式是“两段式”：
             # 1) 先让模型决定是否要调用工具
             # 2) 执行工具后，把结果再喂回模型生成最终回复
@@ -466,7 +564,6 @@ class LLMService:
                 base_url=base_url,
                 messages=messages,
                 stream=False,
-                temperature=0.2,
             )
             choice = response.choices[0] if getattr(response, "choices", None) else None
             message = getattr(choice, "message", None) if choice else None
