@@ -77,6 +77,16 @@ type InteractionItem = {
   created_at: string;
 };
 
+type QualityCard = {
+  key: string;
+  title: string;
+  value: number;
+  accent: string;
+  note: string;
+  tone: "positive" | "risk";
+  inverse?: boolean;
+};
+
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
 function MetricCard({
@@ -346,7 +356,7 @@ export default function InsightsPage() {
     [summary],
   );
 
-  const qualityCards = useMemo(
+  const qualityCards = useMemo<QualityCard[]>(
     () =>
       summary
         ? [
